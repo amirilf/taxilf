@@ -1,32 +1,20 @@
 services:
   postgres:
     image: postgis/postgis:16-3.4
-    container_name: blogilf-postgres
+    container_name: taxilf-postgres
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
-      POSTGRES_DB: blogDB
+      POSTGRES_DB: taxilfDB
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - blog-network
-
-  # rabbitmq:
-  #   image: rabbitmq:3-management
-  #   container_name: rabbitmq
-  #   ports:
-  #     - "5672:5672" # service port
-  #     - "15672:15672" # management plugin port
-  #   networks:
-  #     - blog-network
-  #   environment:
-  #     RABBITMQ_DEFAULT_USER: guest
-  #     RABBITMQ_DEFAULT_PASS: guest
+      - taxilf-network
 
 volumes:
   postgres_data:
 
 networks:
-  blog-network:
+  taxilf-network:

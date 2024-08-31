@@ -3,7 +3,7 @@ spring:
     name: core
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/blogDB
+    url: jdbc:postgresql://localhost:5432/taxilfDB
     driverClassName: org.postgresql.Driver
     username: admin
     password: admin
