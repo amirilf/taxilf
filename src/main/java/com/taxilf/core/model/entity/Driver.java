@@ -12,13 +12,13 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "passengers")
+@Table(name = "drivers")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(callSuper = true)
-public class Passenger extends User {
+public class Driver extends User {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
