@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: core
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/blogDB
+    driverClassName: org.postgresql.Driver
+    username: admin
+    password: admin
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+
+  security:
+    user:
+      name: test
+      password: test

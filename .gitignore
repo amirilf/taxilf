@@ -1,2 +1,8 @@
-Todo.md
+build/
+target/
+.idea/
+.mvn/
+.vscode/
+
 Schema.png
+Todo.md
