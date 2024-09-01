@@ -10,11 +10,14 @@ import org.springframework.stereotype.Service;
 import com.taxilf.core.exception.CustomBadRequestException;
 import com.taxilf.core.exception.CustomTooManyRequestException;
 import com.taxilf.core.exception.CustomUnauthorizedException;
-import com.taxilf.core.model.dto.RegisterPassengerDTO;
+import com.taxilf.core.model.dto.LoginDTO;
+import com.taxilf.core.model.dto.RegisterDTO;
+import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
 import com.taxilf.core.model.entity.enums.Gender;
 import com.taxilf.core.model.entity.enums.Role;
 import com.taxilf.core.model.entity.enums.UserStatus;
+import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
 import com.taxilf.core.utility.Encryption;
 import com.taxilf.core.utility.Variables;
@@ -24,60 +27,101 @@ public class AuthService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private final PassengerRepository passengerRepository;
+    private final DriverRepository driverRepository;
+    private final JwtService jwtService;
 
-    AuthService(RedisTemplate<String, Object> redisTemplate, PassengerRepository passengerRepository){
+    AuthService(RedisTemplate<String, Object> redisTemplate, PassengerRepository passengerRepository, DriverRepository driverRepository, JwtService jwtService){
         this.redisTemplate = redisTemplate;
         this.passengerRepository = passengerRepository;
+        this.driverRepository = driverRepository;
+        this.jwtService = jwtService;
     }
 
-    public ResponseEntity<String> register(RegisterPassengerDTO registerPassengerDTO) {
+    public ResponseEntity<String> register(RegisterDTO registerDTO) {
         
-        String phone = registerPassengerDTO.getPhone();
+        Long id;
+        String name = registerDTO.getName();
+        String gender = registerDTO.getGender();
+        String phone = registerDTO.getPhone();
+        String code = registerDTO.getCode();
+        String role = registerDTO.getRole();
 
-        if (passengerRepository.existsByPhone(phone)) {
-            throw new CustomBadRequestException("Phone number is already registered.");
-        }
+        // check otp
+        otpCheck(phone, code);
 
-        String otpKey = Variables.OTP_PREF + phone;
-        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
-        String storedOtp = (String) ops.get(otpKey);
-
-        if (storedOtp == null || !storedOtp.equals(registerPassengerDTO.getCode())) {
-            throw new CustomUnauthorizedException("Invalid OTP");
-        }
-
-        Passenger passenger = Passenger.builder()
-                .name(registerPassengerDTO.getName())
+        if (role.equals(Role.PASSENGER.name())) {
+            
+            if (passengerRepository.existsByPhone(phone)) {
+                throw new CustomBadRequestException("Phone number is already registered.");
+            }
+            
+            Passenger passenger = Passenger.builder()
+                .name(name)
                 .phone(phone)
-                .gender(registerPassengerDTO.getGender() != null ? Gender.valueOf(registerPassengerDTO.getGender()) : null)
+                .gender(gender != null ? Gender.valueOf(gender) : null)
                 .status(UserStatus.NONE)
                 .role(Role.PASSENGER)
                 .build();
 
-        passengerRepository.save(passenger);    
+            passengerRepository.save(passenger);
+            id = passenger.getId();  
+        
+        } else if (role.equals(Role.DRIVER.name())) {
+            
+            if (driverRepository.existsByPhone(phone)) {
+                throw new CustomBadRequestException("Phone number is already registered.");
+            }
 
-        return ResponseEntity.ok().body("Passenger is successfully created");
+            Driver driver = Driver.builder()
+                .name(name)
+                .phone(phone)
+                .gender(gender != null ? Gender.valueOf(gender) : null)
+                .status(UserStatus.NONE)
+                .role(Role.DRIVER)
+                .build();
+
+            driverRepository.save(driver);
+            id = driver.getId();
+
+        } else {
+            // Admin role
+            throw new CustomBadRequestException("Admin registration is not yet supported.");
+        }
+
+        String token = jwtService.generateToken(id, role);
+        return ResponseEntity.ok().body(role.toLowerCase() + " is successfully created\n" + token);
     }
 
 
-    public ResponseEntity<String> login(String phone, String code) {
+    public ResponseEntity<String> login(LoginDTO loginDTO) {
 
-        if (!passengerRepository.existsByPhone(phone)) {
+        Long id;
+        String phone = loginDTO.getPhone();
+        String code = loginDTO.getCode();
+        String role = loginDTO.getRole();
+
+        // check otp
+        otpCheck(phone, code);
+
+        if (role.equals(Role.PASSENGER.name())) {
+            id = passengerRepository.getIDByPhone(phone);
+        } else if (role.equals(Role.DRIVER.name())) {
+            id = driverRepository.getIDByPhone(phone);
+        } else {
+            // Admin role
+            throw new CustomBadRequestException("Admin authentication is not yet supported.");
+        }
+
+        if (id == null) {
             throw new CustomBadRequestException("Phone number is not registered.");
         }
-
-        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
-        String storedOtp = (String) ops.get(Variables.OTP_PREF + phone);
-
-        if (storedOtp == null || !storedOtp.equals(code)) {
-            throw new CustomUnauthorizedException("Invalid OTP");
-        }
         
-        // generating tokens (access and refresh) here
-        return ResponseEntity.ok("Login successful");
+        // generate access token
+        String token = jwtService.generateToken(id, role);
+        return ResponseEntity.ok("successful " + role.toLowerCase() + " login\n" + token);
     }
 
-    public ResponseEntity<String> otpRequest(String phone) {
+    public ResponseEntity<String> requestOTP(String phone) {
         
         String otpKey = Variables.OTP_PREF + phone;
         String limitKey = Variables.OTP_LIMIT_PREF + phone;
@@ -103,5 +147,15 @@ public class AuthService {
         System.out.println("The code: " + otp); // calling sendSMS() method in real world
     
         return ResponseEntity.ok("OTP is sent");
+    }
+
+    private void otpCheck(String phone, String code) {
+        String otpKey = Variables.OTP_PREF + phone;
+        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
+        String storedOtp = (String) ops.get(otpKey);
+
+        if (storedOtp == null || !storedOtp.equals(code)) {
+            throw new CustomUnauthorizedException("Invalid OTP");
+        }
     }
 }

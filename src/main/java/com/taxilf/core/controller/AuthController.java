@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.taxilf.core.model.dto.LoginDTO;
 import com.taxilf.core.model.dto.LoginRequestDTO;
-import com.taxilf.core.model.dto.RegisterPassengerDTO;
+import com.taxilf.core.model.dto.RegisterDTO;
 import com.taxilf.core.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -24,19 +24,19 @@ public class AuthController {
         this.authService = authService;
     }
     
-    @PostMapping("/register/passenger")
-    public ResponseEntity<String> register(@Valid @RequestBody RegisterPassengerDTO registerPassengerDTO){
+    @PostMapping("/register")
+    public ResponseEntity<String> register(@Valid @RequestBody RegisterDTO registerPassengerDTO){
         return authService.register(registerPassengerDTO); 
     }
 
     @PostMapping("/login")
     public ResponseEntity<String> login(@Valid @RequestBody LoginDTO loginDTO) {
-        return authService.login(loginDTO.getPhone(), loginDTO.getCode());
+        return authService.login(loginDTO);
     }
 
-    @PostMapping("/otp-request")
-    public ResponseEntity<String> otpRequest(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
-        return authService.otpRequest(loginRequestDTO.getPhone());
+    @PostMapping("/request-otp")
+    public ResponseEntity<String> requestOTP(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
+        return authService.requestOTP(loginRequestDTO.getPhone());
     }
 
 }

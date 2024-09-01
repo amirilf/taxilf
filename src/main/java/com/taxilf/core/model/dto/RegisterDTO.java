@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Data;
 
 @Data
-public class RegisterPassengerDTO {
+public class RegisterDTO {
 
     @NotBlank(message = "Name is required")
     private String name;
@@ -20,7 +20,11 @@ public class RegisterPassengerDTO {
     @Pattern(regexp = Variables.OTP_REGEX, message = "Invalid Code")
     private String code;
 
-    @Pattern(regexp = "MALE|FEMALE|", message = "Gender must be either MALE or FEMALE")
+    @Pattern(regexp = Variables.USER_DTO_ROLES, message = "Gender must be either MALE or FEMALE")
     private String gender;
+
+    @NotBlank
+    @Pattern(regexp = Variables.USER_DTO_ROLES)
+    private String role;
 
 }

@@ -9,6 +9,10 @@ import lombok.Data;
 @Data
 public class LoginDTO {
 
+    @NotBlank
+    @Pattern(regexp = Variables.USER_DTO_ROLES)
+    private String role;
+
     @NotBlank(message = "Phone number is required")
     @Pattern(regexp = Variables.PHONE_REGEX, message = "Invalid phone number")
     private String phone;
