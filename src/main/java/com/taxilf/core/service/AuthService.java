@@ -7,6 +7,9 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.taxilf.core.exception.CustomBadRequestException;
+import com.taxilf.core.exception.CustomTooManyRequestException;
+import com.taxilf.core.exception.CustomUnauthorizedException;
 import com.taxilf.core.model.dto.RegisterPassengerDTO;
 import com.taxilf.core.model.entity.Passenger;
 import com.taxilf.core.model.entity.enums.Gender;
@@ -32,7 +35,7 @@ public class AuthService {
         String phone = registerPassengerDTO.getPhone();
 
         if (passengerRepository.existsByPhone(phone)) {
-            return ResponseEntity.status(400).body("Phone number is already registered.");
+            throw new CustomBadRequestException("Phone number is already registered.");
         }
 
         String otpKey = Variables.OTP_PREF + phone;
@@ -40,7 +43,7 @@ public class AuthService {
         String storedOtp = (String) ops.get(otpKey);
 
         if (storedOtp == null || !storedOtp.equals(registerPassengerDTO.getCode())) {
-            return ResponseEntity.status(401).body("Invalid OTP");
+            throw new CustomUnauthorizedException("Invalid OTP");
         }
 
         Passenger passenger = Passenger.builder()
@@ -60,18 +63,18 @@ public class AuthService {
     public ResponseEntity<String> login(String phone, String code) {
 
         if (!passengerRepository.existsByPhone(phone)) {
-            return ResponseEntity.status(400).body("Phone number is not registered.");
+            throw new CustomBadRequestException("Phone number is not registered.");
         }
 
         ValueOperations<String, Object> ops = redisTemplate.opsForValue();
         String storedOtp = (String) ops.get(Variables.OTP_PREF + phone);
 
-        if (storedOtp != null && storedOtp.equals(code)) {
-            // generating tokens (access and refresh) here
-            return ResponseEntity.ok("Login successful");
-        } else {
-            return ResponseEntity.status(401).body("Invalid OTP");
+        if (storedOtp == null || !storedOtp.equals(code)) {
+            throw new CustomUnauthorizedException("Invalid OTP");
         }
+        
+        // generating tokens (access and refresh) here
+        return ResponseEntity.ok("Login successful");
     }
 
     public ResponseEntity<String> otpRequest(String phone) {
@@ -87,7 +90,7 @@ public class AuthService {
         
         // check limitation
         if (requestCount >= Variables.OTP_MAX_REQUEST) {
-            return ResponseEntity.status(429).body("Too many requests. Please try again later.");
+            throw new CustomTooManyRequestException("Too many requests for OTP. Try again later.");
         }
             
         // increase limitation counter & set expire time of it
