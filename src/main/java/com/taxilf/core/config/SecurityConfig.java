@@ -8,7 +8,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.taxilf.core.jwt.JwtFilter;
+import com.taxilf.core.filter.JwtFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -26,7 +26,7 @@ public class SecurityConfig {
         http
         
             .authorizeHttpRequests(request -> request
-                .requestMatchers("/signup/**", "/login/**", "/refresh-token").permitAll()
+                .requestMatchers("/auth/**").permitAll()
                 .anyRequest().authenticated() 
             )
         

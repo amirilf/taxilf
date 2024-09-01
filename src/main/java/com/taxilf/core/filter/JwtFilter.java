@@ -1,4 +1,4 @@
-package com.taxilf.core.jwt;
+package com.taxilf.core.filter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -13,6 +13,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.taxilf.core.service.JwtService;
 
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;

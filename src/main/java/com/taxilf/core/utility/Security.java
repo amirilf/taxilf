@@ -1,5 +1,7 @@
 package com.taxilf.core.utility;
 
+import java.util.Random;
+
 public class Security {
 
     /*
@@ -15,5 +17,9 @@ public class Security {
 
     public static Long decode(String id){
         return Long.parseLong(id) - JUST_A_RANDOM_NUMBER;
+    }
+
+    public static String otp(){
+        return String.format("%06d", new Random().nextInt(111111,1000000));
     }
 }

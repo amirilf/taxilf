@@ -13,6 +13,14 @@ services:
     networks:
       - taxilf-network
 
+  redis:
+    image: redis:7.4.0-alpine
+    container_name: taxilf-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - taxilf-network
+
 volumes:
   postgres_data:
 

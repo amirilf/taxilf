@@ -1,4 +1,4 @@
-package com.taxilf.core.jwt;
+package com.taxilf.core.service;
 
 import org.springframework.stereotype.Service;
 
