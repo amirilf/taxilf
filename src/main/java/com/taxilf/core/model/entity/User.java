@@ -1,6 +1,6 @@
 package com.taxilf.core.model.entity;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -12,10 +12,13 @@ import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.MappedSuperclass;
+import lombok.Builder.Default;
+import lombok.experimental.SuperBuilder;
 
 @MappedSuperclass
+@SuperBuilder
 public abstract class User {
-    
+
     @Column(name = "name", nullable = false)
     private String name;
 
@@ -24,15 +27,18 @@ public abstract class User {
 
     @CreationTimestamp
     @Column(name = "joined_at", nullable = false, updatable = false)
-    private LocalDate joinedAt;
+    private LocalDateTime joinedAt;
 
+    @Default
     @Enumerated(EnumType.STRING)
-    @Column(name = "gender")
-    private Gender gender = Gender.NONE;
+    @Column(name = "gender", nullable = true)
+    private Gender gender = null;
 
-    @Column(name = "balance", nullable = false)
+    @Default
+    @Column(name = "balance")
     private Double balance = 0d;
 
+    @Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private UserStatus status = UserStatus.NONE;

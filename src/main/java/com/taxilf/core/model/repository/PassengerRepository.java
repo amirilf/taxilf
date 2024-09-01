@@ -7,5 +7,5 @@ import com.taxilf.core.model.entity.Passenger;
 
 @Repository
 public interface PassengerRepository extends JpaRepository<Passenger, Long> {
-    
+    boolean existsByPhone(String phone);
 }

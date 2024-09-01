@@ -7,38 +7,74 @@ import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.taxilf.core.model.dto.RegisterPassengerDTO;
 import com.taxilf.core.model.entity.Passenger;
-import com.taxilf.core.utility.Security;
+import com.taxilf.core.model.entity.enums.Gender;
+import com.taxilf.core.model.entity.enums.Role;
+import com.taxilf.core.model.entity.enums.UserStatus;
+import com.taxilf.core.model.repository.PassengerRepository;
+import com.taxilf.core.utility.Encryption;
 import com.taxilf.core.utility.Variables;
-
-import jakarta.validation.Valid;
 
 @Service
 public class AuthService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final PassengerRepository passengerRepository;
 
-    AuthService(RedisTemplate<String, Object> redisTemplate){
+    AuthService(RedisTemplate<String, Object> redisTemplate, PassengerRepository passengerRepository){
         this.redisTemplate = redisTemplate;
+        this.passengerRepository = passengerRepository;
     }
 
+    public ResponseEntity<String> register(RegisterPassengerDTO registerPassengerDTO) {
+        
+        String phone = registerPassengerDTO.getPhone();
 
-    public Passenger register(@Valid Passenger user) {
-        return null;
+        if (passengerRepository.existsByPhone(phone)) {
+            return ResponseEntity.status(400).body("Phone number is already registered.");
+        }
+
+        String otpKey = Variables.OTP_PREF + phone;
+        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
+        String storedOtp = (String) ops.get(otpKey);
+
+        if (storedOtp == null || !storedOtp.equals(registerPassengerDTO.getCode())) {
+            return ResponseEntity.status(401).body("Invalid OTP");
+        }
+
+        Passenger passenger = Passenger.builder()
+                .name(registerPassengerDTO.getName())
+                .phone(phone)
+                .gender(registerPassengerDTO.getGender() != null ? Gender.valueOf(registerPassengerDTO.getGender()) : null)
+                .status(UserStatus.NONE)
+                .role(Role.PASSENGER)
+                .build();
+
+        passengerRepository.save(passenger);    
+
+        return ResponseEntity.ok().body("Passenger is successfully created");
     }
+
 
     public ResponseEntity<String> login(String phone, String code) {
+
+        if (!passengerRepository.existsByPhone(phone)) {
+            return ResponseEntity.status(400).body("Phone number is not registered.");
+        }
+
         ValueOperations<String, Object> ops = redisTemplate.opsForValue();
-        String storedOtp = (String) ops.get("otp_" + phone);
+        String storedOtp = (String) ops.get(Variables.OTP_PREF + phone);
 
         if (storedOtp != null && storedOtp.equals(code)) {
+            // generating tokens (access and refresh) here
             return ResponseEntity.ok("Login successful");
         } else {
             return ResponseEntity.status(401).body("Invalid OTP");
         }
     }
 
-    public ResponseEntity<String> loginRequest(String phone) {
+    public ResponseEntity<String> otpRequest(String phone) {
         
         String otpKey = Variables.OTP_PREF + phone;
         String limitKey = Variables.OTP_LIMIT_PREF + phone;
@@ -59,12 +95,10 @@ public class AuthService {
         redisTemplate.expire(limitKey, Variables.OTP_TIME_WINDOW, TimeUnit.SECONDS);
     
         // create otp & set TTL
-        String otp = Security.otp();
+        String otp = Encryption.otp();
         ops.set(otpKey, otp, Variables.OTP_TTL_PER_SECONDS, TimeUnit.SECONDS);
         System.out.println("The code: " + otp); // calling sendSMS() method in real world
     
         return ResponseEntity.ok("OTP is sent");
     }
-    
-
 }
