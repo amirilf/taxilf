@@ -78,19 +78,19 @@ public class InitialData implements CommandLineRunner {
         
         // drivers & vehicles
         for (int i = 1; i <= 20; i++) {
-
-            Driver d = Driver.builder()
-                .name("D" + i)
-                .phone(String.valueOf(100 + i))
-                .build();
             
             Vehicle v = Vehicle.builder()
                 .vehicleSubtype(listOfVehicleSubtypes[random.nextInt(0,8)])
                 .model(random.nextInt(2000,2024))
                 .plate(String.valueOf(1000 + i))
                 .build();
+            
+            Driver d = Driver.builder()
+                .name("D" + i)
+                .phone(String.valueOf(100 + i))
+                .vehicle(v)
+                .build();
 
-            d.setVehicle(v);
             v.setDriver(d);
 
             // will create both since we used cascade

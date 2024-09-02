@@ -14,6 +14,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 @Entity
 @Table(name = "vehicle_types")
 @Data
@@ -27,6 +29,7 @@ public class VehicleType {
     private Long id;
 
     @OneToMany(mappedBy = "vehicleType")
+    @JsonIgnore
     private List<VehicleSubtype> vehicleSubtypes;
 
     @Column(name = "name", nullable = false, unique = true, updatable = false)
