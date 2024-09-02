@@ -14,15 +14,17 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.MappedSuperclass;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.Builder.Default;
 import lombok.experimental.SuperBuilder;
 
 @MappedSuperclass
-@SuperBuilder
 @Data
+@NoArgsConstructor
 @AllArgsConstructor
+@SuperBuilder
 public abstract class User {
-
+    
     @Column(name = "name", nullable = false)
     private String name;
 
