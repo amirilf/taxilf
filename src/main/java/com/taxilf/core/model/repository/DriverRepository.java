@@ -1,5 +1,6 @@
 package com.taxilf.core.model.repository;
 
+import org.locationtech.jts.geom.Location;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -7,12 +8,12 @@ import org.springframework.stereotype.Repository;
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.projection.DriverProfileProjection;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface DriverRepository extends JpaRepository<Driver, Long> {
     
-    Optional<Driver> findByPhone(String phone);
     boolean existsByPhone(String phone);
 
     @Query(value = "SELECT d.id FROM drivers d WHERE d.phone = :phone", nativeQuery = true)
@@ -28,4 +29,7 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
                 "WHERE d.id = :id", 
            nativeQuery = true)
     Optional<DriverProfileProjection> findProfileById(Long id);
+
+    
+    List<Location> findLocations();
 }

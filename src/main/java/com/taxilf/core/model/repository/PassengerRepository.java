@@ -11,7 +11,6 @@ import java.util.Optional;
 @Repository
 public interface PassengerRepository extends JpaRepository<Passenger, Long> {
     
-    Optional<Passenger> findByPhone(String phone);
     boolean existsByPhone(String phone);
 
     @Query(value = "SELECT p.id FROM passengers p WHERE p.phone = :phone", nativeQuery = true)

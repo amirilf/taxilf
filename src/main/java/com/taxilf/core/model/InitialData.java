@@ -92,6 +92,7 @@ public class InitialData implements CommandLineRunner {
             Driver d = Driver.builder()
                 .name("D" + i)
                 .phone("10" + i)
+                .location(GeometryUtils.generateRandomPointInMashhad())
                 .vehicle(v)
                 .build();
 

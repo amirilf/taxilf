@@ -38,7 +38,7 @@ public abstract class User {
     @Default
     @Enumerated(EnumType.STRING)
     @Column(name = "gender", nullable = true)
-    private Gender gender = null;
+    private Gender gender = Gender.NONE;
 
     @Default
     @Column(name = "balance")

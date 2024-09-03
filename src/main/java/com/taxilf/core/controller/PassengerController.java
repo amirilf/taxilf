@@ -26,7 +26,7 @@ public class PassengerController {
         return passengerService.getProfile();
     }
 
-    @GetMapping("/personal-location")
+    @GetMapping("/personal-locations")
     public List<PersonalLocationProjection> getPersonalLocations() {
         return passengerService.getPersonalLocations();
     }
