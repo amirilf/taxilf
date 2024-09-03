@@ -4,9 +4,9 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
-import com.taxilf.core.model.entity.enums.Gender;
-import com.taxilf.core.model.entity.enums.Role;
-import com.taxilf.core.model.entity.enums.UserStatus;
+import com.taxilf.core.model.enums.Gender;
+import com.taxilf.core.model.enums.Role;
+import com.taxilf.core.model.enums.UserStatus;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.EnumType;

@@ -1,4 +1,4 @@
-package com.taxilf.core.model.entity.enums;
+package com.taxilf.core.model.enums;
 
 public enum Role {
     PASSENGER,

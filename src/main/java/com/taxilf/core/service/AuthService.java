@@ -14,9 +14,9 @@ import com.taxilf.core.model.dto.LoginDTO;
 import com.taxilf.core.model.dto.RegisterDTO;
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
-import com.taxilf.core.model.entity.enums.Gender;
-import com.taxilf.core.model.entity.enums.Role;
-import com.taxilf.core.model.entity.enums.UserStatus;
+import com.taxilf.core.model.enums.Gender;
+import com.taxilf.core.model.enums.Role;
+import com.taxilf.core.model.enums.UserStatus;
 import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
 import com.taxilf.core.utility.Encryption;
@@ -104,9 +104,9 @@ public class AuthService {
         otpCheck(phone, code);
 
         if (role.equals(Role.PASSENGER.name())) {
-            id = passengerRepository.getIDByPhone(phone);
+            id = passengerRepository.findIDByPhone(phone);
         } else if (role.equals(Role.DRIVER.name())) {
-            id = driverRepository.getIDByPhone(phone);
+            id = driverRepository.findIDByPhone(phone);
         } else {
             // Admin role
             throw new CustomBadRequestException("Admin authentication is not yet supported.");

@@ -5,9 +5,9 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.taxilf.core.model.entity.Passenger;
+import com.taxilf.core.model.projection.PassengerProfileProjection;
 
 import java.util.Optional;
-
 
 @Repository
 public interface PassengerRepository extends JpaRepository<Passenger, Long> {
@@ -16,6 +16,12 @@ public interface PassengerRepository extends JpaRepository<Passenger, Long> {
     boolean existsByPhone(String phone);
 
     @Query(value = "SELECT p.id FROM passengers p WHERE p.phone = :phone", nativeQuery = true)
-    Long getIDByPhone(String phone); 
-    
+    Long findIDByPhone(String phone);
+
+    @Query(value = "SELECT " +
+                   "p.name AS name, p.phone AS phone, p.joined_at AS joinedAt, p.gender AS gender " +
+                   "FROM passengers p " +
+                   "WHERE p.id = :id", 
+           nativeQuery = true)
+    Optional<PassengerProfileProjection> findProfileById(Long id);   
 }

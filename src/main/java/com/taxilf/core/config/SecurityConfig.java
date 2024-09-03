@@ -9,6 +9,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.taxilf.core.filter.JwtFilter;
+import com.taxilf.core.model.enums.Role;
 
 @Configuration
 @EnableWebSecurity
@@ -27,6 +28,8 @@ public class SecurityConfig {
         
             .authorizeHttpRequests(request -> request
                 .requestMatchers("/auth/**", "/admin/**").permitAll()
+                .requestMatchers("/passenger/**").hasAuthority(Role.PASSENGER.name())
+                .requestMatchers("/driver/**").hasAuthority(Role.DRIVER.name())
                 .anyRequest().authenticated() 
             )
         

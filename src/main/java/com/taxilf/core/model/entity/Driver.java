@@ -1,6 +1,6 @@
 package com.taxilf.core.model.entity;
 
-import com.taxilf.core.model.entity.enums.Role;
+import com.taxilf.core.model.enums.Role;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
