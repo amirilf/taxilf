@@ -19,7 +19,7 @@ import com.taxilf.core.model.enums.Role;
 import com.taxilf.core.model.enums.UserStatus;
 import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
-import com.taxilf.core.utility.Encryption;
+import com.taxilf.core.utility.EncryptionUtils;
 import com.taxilf.core.utility.Variables;
 
 @Service
@@ -104,9 +104,9 @@ public class AuthService {
         otpCheck(phone, code);
 
         if (role.equals(Role.PASSENGER.name())) {
-            id = passengerRepository.findIDByPhone(phone);
+            id = passengerRepository.findIdByPhone(phone);
         } else if (role.equals(Role.DRIVER.name())) {
-            id = driverRepository.findIDByPhone(phone);
+            id = driverRepository.findIdByPhone(phone);
         } else {
             // Admin role
             throw new CustomBadRequestException("Admin authentication is not yet supported.");
@@ -142,7 +142,7 @@ public class AuthService {
         redisTemplate.expire(limitKey, Variables.OTP_TIME_WINDOW, TimeUnit.SECONDS);
     
         // create otp & set TTL
-        String otp = Encryption.otp();
+        String otp = EncryptionUtils.otp();
         ops.set(otpKey, otp, Variables.OTP_TTL_PER_SECONDS, TimeUnit.SECONDS);
         System.out.println("The code: " + otp); // calling sendSMS() method in real world
     

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
+import com.taxilf.core.model.entity.PersonalLocation;
 import com.taxilf.core.model.entity.Vehicle;
 import com.taxilf.core.model.entity.VehicleSubtype;
 import com.taxilf.core.model.entity.VehicleType;
@@ -13,8 +14,11 @@ import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
 import com.taxilf.core.model.repository.VehicleSubtypeRepository;
 import com.taxilf.core.model.repository.VehicleTypeRepository;
+import com.taxilf.core.utility.GeometryUtils;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 @Component
@@ -26,7 +30,7 @@ public class InitialData implements CommandLineRunner {
     private final VehicleTypeRepository vehicleTypeRepository;
     private final VehicleSubtypeRepository vehicleSubtypeRepository;
 
-    private final Random random = new Random();
+    private static final Random random = new Random();
 
     InitialData(PassengerRepository passengerRepository, DriverRepository driverRepository, VehicleTypeRepository vehicleTypeRepository, VehicleSubtypeRepository vehicleSubtypeRepository){
         this.passengerRepository = passengerRepository;
@@ -87,7 +91,7 @@ public class InitialData implements CommandLineRunner {
             
             Driver d = Driver.builder()
                 .name("D" + i)
-                .phone(String.valueOf(100 + i))
+                .phone("10" + i)
                 .vehicle(v)
                 .build();
 
@@ -99,11 +103,29 @@ public class InitialData implements CommandLineRunner {
     }
 
     private void loadPassengers(){
-        Passenger p1 = Passenger.builder().name("P1").phone("100").build();
-        Passenger p2 = Passenger.builder().name("P2").phone("200").build();
-        Passenger p3 = Passenger.builder().name("P3").phone("300").build();
-        Passenger p4 = Passenger.builder().name("P4").phone("400").build();
-        Passenger p5 = Passenger.builder().name("P5").phone("500").build();
-        passengerRepository.saveAll(Arrays.asList(p1,p2,p3,p4,p5));
+        
+        List<Passenger> passengers = new ArrayList<>();
+
+        for (int i = 1; i <= 10; i++) {
+            Passenger passenger = Passenger.builder()
+                .name("P" + i)
+                .phone("20" + i)
+                .build();
+
+            List<PersonalLocation> locations = new ArrayList<>();
+            for (int j = 1; j <= 4; j++) {
+                PersonalLocation location = PersonalLocation.builder()
+                    .name("Location " + j + " for P" + i)
+                    .location(GeometryUtils.generateRandomPointInMashhad())
+                    .passenger(passenger)
+                    .build();
+                locations.add(location);
+            }
+            passenger.setPersonalLocations(locations);
+            passengers.add(passenger);
+        }
+
+        // no need for personal locations since using cascade
+        passengerRepository.saveAll(passengers);
     }
 }

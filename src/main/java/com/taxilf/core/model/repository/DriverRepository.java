@@ -16,7 +16,7 @@ public interface DriverRepository extends JpaRepository<Driver, Long> {
     boolean existsByPhone(String phone);
 
     @Query(value = "SELECT d.id FROM drivers d WHERE d.phone = :phone", nativeQuery = true)
-    Long findIDByPhone(String phone); 
+    Long findIdByPhone(String phone); 
 
     @Query(value = "SELECT " +
                 "d.name AS name, d.phone AS phone, d.joined_at AS joinedAt, d.gender AS gender, " +

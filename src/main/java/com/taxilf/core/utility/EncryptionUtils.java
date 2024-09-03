@@ -2,7 +2,7 @@ package com.taxilf.core.utility;
 
 import java.util.Random;
 
-public class Encryption {
+public class EncryptionUtils {
 
     /*
     * A very simple way to change the display value in JWT (ID)

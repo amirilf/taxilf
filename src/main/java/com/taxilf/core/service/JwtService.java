@@ -2,7 +2,7 @@ package com.taxilf.core.service;
 
 import org.springframework.stereotype.Service;
 
-import com.taxilf.core.utility.Encryption;
+import com.taxilf.core.utility.EncryptionUtils;
 import com.taxilf.core.utility.Variables;
 
 import io.jsonwebtoken.Claims;
@@ -53,7 +53,7 @@ public class JwtService {
         return Jwts.builder()
             .claims()
             .add(claims)
-            .subject(Encryption.encode(id))
+            .subject(EncryptionUtils.encode(id))
             .issuedAt(new Date(System.currentTimeMillis()))
             .expiration(new Date(System.currentTimeMillis() + Variables.ACCESS_TOKEN_EXPIRATION_TIME))
             .and()
@@ -70,7 +70,7 @@ public class JwtService {
         
         Claims claims = extractAllClaims(token);
         
-        String id = String.valueOf(Encryption.decode(claims.getSubject()));
+        String id = String.valueOf(EncryptionUtils.decode(claims.getSubject()));
         String role = (String) claims.get("role");
 
         Map<String, String> result = new HashMap<>();
