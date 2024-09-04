@@ -1,5 +1,6 @@
 package com.taxilf.core.model.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -31,6 +32,10 @@ public class VehicleType {
     @OneToMany(mappedBy = "vehicleType")
     @JsonIgnore
     private List<VehicleSubtype> vehicleSubtypes;
+
+    @OneToMany(mappedBy = "vehicleType", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<TripRequest> tripRequests;
 
     @Column(name = "name", nullable = false, unique = true, updatable = false)
     private String name;

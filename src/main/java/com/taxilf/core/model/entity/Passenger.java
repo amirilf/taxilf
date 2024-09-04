@@ -33,6 +33,9 @@ public class Passenger extends User {
     @OneToMany(mappedBy = "passenger", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PersonalLocation> personalLocations;
 
+    @OneToMany(mappedBy = "passenger", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<TripRequest> tripRequests;
+
     public static PassengerBuilder<?, ?> builder() {
         return passengerBuilder().role(Role.PASSENGER);
     }
