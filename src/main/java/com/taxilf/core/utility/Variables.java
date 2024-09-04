@@ -25,4 +25,12 @@ public class Variables {
     // DTOs
     public static final String USER_DTO_ROLES = "PASSENGER|DRIVER|ADMIN";
     public static final String USER_DTO_GENDER = "MALE|FEMALE";
+
+    // GEOMETY UTIL
+    public static final double EARTH_RADIUS = 6371000; // in meters
+    public static final double PRICE_PER_METERS = 0.01; // lets say in $
+    public static final double RADIUS_IN_DEGREES = 0.05; // ~5km
+    public static final double MASHHAD_LAT = 36.31;
+    public static final double MASHHAD_LON = 59.59;
+
 }

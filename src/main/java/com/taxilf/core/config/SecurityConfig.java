@@ -27,7 +27,7 @@ public class SecurityConfig {
         http
         
             .authorizeHttpRequests(request -> request
-                .requestMatchers("/auth/**", "/admin/**").permitAll()
+                .requestMatchers("/auth/**", "/admin/**", "/trip/**").permitAll()
                 .requestMatchers("/passenger/**").hasAuthority(Role.PASSENGER.name())
                 .requestMatchers("/driver/**").hasAuthority(Role.DRIVER.name())
                 .anyRequest().authenticated() 

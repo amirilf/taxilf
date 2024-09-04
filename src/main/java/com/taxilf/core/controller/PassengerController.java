@@ -1,15 +1,14 @@
 package com.taxilf.core.controller;
 
+import java.util.List;
+
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import com.taxilf.core.model.projection.PassengerProfileProjection;
 import com.taxilf.core.model.projection.PersonalLocationProjection;
 import com.taxilf.core.service.PassengerService;
-
-import java.util.List;
-
-import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
 @RequestMapping("/passenger")

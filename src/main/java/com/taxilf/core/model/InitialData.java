@@ -92,7 +92,7 @@ public class InitialData implements CommandLineRunner {
             Driver d = Driver.builder()
                 .name("D" + i)
                 .phone("10" + i)
-                .location(GeometryUtils.generateRandomPointInMashhad())
+                .location(GeometryUtils.randomPointInMashhad())
                 .vehicle(v)
                 .build();
 
@@ -116,8 +116,8 @@ public class InitialData implements CommandLineRunner {
             List<PersonalLocation> locations = new ArrayList<>();
             for (int j = 1; j <= 4; j++) {
                 PersonalLocation location = PersonalLocation.builder()
-                    .name("Location " + j + " for P" + i)
-                    .location(GeometryUtils.generateRandomPointInMashhad())
+                    .name("l" + j + "p" + i)
+                    .location(GeometryUtils.randomPointInMashhad())
                     .passenger(passenger)
                     .build();
                 locations.add(location);

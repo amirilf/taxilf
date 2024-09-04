@@ -1,6 +1,7 @@
 package com.taxilf.core.model.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,6 +13,9 @@ import com.taxilf.core.model.projection.PersonalLocationProjection;
 @Repository
 public interface PersonalLocationRepository extends JpaRepository<PersonalLocation, Long> {
 
+    @Query(value = "SELECT * FROM personal_locations pl WHERE pl.passenger_id = :id AND name = :name", nativeQuery = true)
+    Optional<PersonalLocation> findByPassengerIdAndName(Long id, String name);
+    
     @Query("SELECT pl.name AS name, pl.location AS location " +
            "FROM PersonalLocation pl " +
            "WHERE pl.passenger.id = :passengerId")

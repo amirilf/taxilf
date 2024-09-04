@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.taxilf.core.exception.CustomBadRequestException;
@@ -38,6 +39,10 @@ public class AuthService {
     }
 
     public ResponseEntity<String> register(RegisterDTO registerDTO) {
+
+        if (!SecurityContextHolder.getContext().getAuthentication().getName().equals("anonymousUser")) {
+            throw new CustomBadRequestException("User is already logged in, first logout.");
+        }
         
         Long id;
         String name = registerDTO.getName();
@@ -95,6 +100,10 @@ public class AuthService {
 
     public ResponseEntity<String> login(LoginDTO loginDTO) {
 
+        if (!SecurityContextHolder.getContext().getAuthentication().getName().equals("anonymousUser")) {
+            throw new CustomBadRequestException("User is already logged in, first logout.");
+        }
+
         Long id;
         String phone = loginDTO.getPhone();
         String code = loginDTO.getCode();
@@ -150,6 +159,7 @@ public class AuthService {
     }
 
     private void otpCheck(String phone, String code) {
+
         String otpKey = Variables.OTP_PREF + phone;
         ValueOperations<String, Object> ops = redisTemplate.opsForValue();
         String storedOtp = (String) ops.get(otpKey);
