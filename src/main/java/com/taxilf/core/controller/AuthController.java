@@ -3,9 +3,9 @@ package com.taxilf.core.controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.taxilf.core.model.dto.LoginDTO;
-import com.taxilf.core.model.dto.LoginRequestDTO;
-import com.taxilf.core.model.dto.RegisterDTO;
+import com.taxilf.core.model.dto.request.LoginDTO;
+import com.taxilf.core.model.dto.request.LoginRequestDTO;
+import com.taxilf.core.model.dto.request.RegisterDTO;
 import com.taxilf.core.service.AuthService;
 
 import jakarta.validation.Valid;

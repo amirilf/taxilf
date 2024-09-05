@@ -41,8 +41,8 @@ public class Trip {
     private TripRequest tripRequest;
 
     // in minutes
-    @Column(name = "estimated_time", nullable = false)
-    private Integer estimatedTime;
+    @Column(name = "time", nullable = true)
+    private Integer time;
     
     @Default
     @Enumerated(EnumType.STRING)

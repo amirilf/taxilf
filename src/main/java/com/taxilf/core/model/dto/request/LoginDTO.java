@@ -1,4 +1,4 @@
-package com.taxilf.core.model.dto;
+package com.taxilf.core.model.dto.request;
 
 import com.taxilf.core.utility.Variables;
 

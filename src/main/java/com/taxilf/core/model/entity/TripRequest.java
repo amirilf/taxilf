@@ -47,8 +47,9 @@ public class TripRequest {
     @JoinColumn(name = "vehicle_type_id", nullable = false)
     private VehicleType vehicleType;
 
+    @Default
     @OneToOne(mappedBy = "tripRequest")
-    private Trip trip;
+    private Trip trip = null;
 
     @Column(name = "fare", nullable = false)
     private Double fare;
