@@ -1,5 +1,7 @@
 package com.taxilf.core.model.dto.request;
 
+import org.locationtech.jts.geom.impl.PackedCoordinateSequence.Double;
+
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -18,5 +20,7 @@ public class TripRequestDTO {
     @NotNull
     @Positive
     private Double fare;
+
+    private TripPointDTO tripPoint;
 
 }

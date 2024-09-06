@@ -5,7 +5,9 @@ import org.springframework.stereotype.Repository;
 
 import com.taxilf.core.model.entity.VehicleType;
 
+import java.util.Optional;
+
 @Repository
 public interface VehicleTypeRepository extends JpaRepository<VehicleType, Long> {
-    
+    Optional<VehicleType> findByName(String name);
 }
