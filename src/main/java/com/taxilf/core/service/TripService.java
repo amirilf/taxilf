@@ -17,6 +17,7 @@ import com.taxilf.core.exception.CustomResourceNotFoundException;
 import com.taxilf.core.model.dto.request.TripPointDTO;
 import com.taxilf.core.model.dto.request.TripRequestDTO;
 import com.taxilf.core.model.dto.response.DriverSearchDTO;
+import com.taxilf.core.model.dto.response.DriverStatusDTO;
 import com.taxilf.core.model.dto.response.DriverTripRequestDTO;
 import com.taxilf.core.model.dto.response.PassengerStatusDTO;
 import com.taxilf.core.model.entity.Driver;
@@ -73,8 +74,7 @@ public class TripService {
     // PASSENGER
     public ResponseEntity<String> passengerRequest(TripRequestDTO tripRequestDTO) {
 
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        Passenger passenger = passengerRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
+        Passenger passenger = getPassenger();
         UserStatus pStatus = passenger.getStatus();
         checkUserStatus(pStatus, "Passenger already has a trip process.", UserStatus.NONE);
 
@@ -98,15 +98,14 @@ public class TripService {
 
     public PassengerStatusDTO passengerStatus() {
         
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        Passenger passenger = passengerRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
+        Passenger passenger = getPassenger();
         UserStatus pStatus = passenger.getStatus();
         
         if (pStatus == UserStatus.NONE) {
             return PassengerStatusDTO.builder().info("You don't have any trip process.").build();
         } else if (pStatus == UserStatus.SEARCHING) {
             
-            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
             return PassengerStatusDTO.builder()
                 .info("Searching for a driver.")
                 .fare(tripRequest.getFare())
@@ -117,7 +116,7 @@ public class TripService {
 
         } else { // ACTIVE
 
-            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
             Trip trip = tripRequest.getTrip();
             Driver driver = trip.getDriver();
 
@@ -136,14 +135,13 @@ public class TripService {
 
     public ResponseEntity<String> passengerCancel() {
 
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        Passenger passenger = passengerRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
+        Passenger passenger = getPassenger();
         UserStatus pStatus = passenger.getStatus();
         checkUserStatus(pStatus, "Passenger doesn't have a trip process to cancel.", UserStatus.SEARCHING, UserStatus.ACTIVE);
 
         if (pStatus == UserStatus.SEARCHING) {
             
-            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
             tripRequest.setStatus(TripRequestStatus.CANCELED);
             tripRequestRepository.save(tripRequest);
 
@@ -154,7 +152,7 @@ public class TripService {
 
         } else { // ACTIVE
 
-            TripRequest tripRequest = tripRequestRepository.findLastFoundedTripRequestByPassengerId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            TripRequest tripRequest = tripRequestRepository.findLastFoundedTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
             Trip trip = tripRequest.getTrip();
             TripStatus tripStatus = trip.getStatus();
             Driver driver = trip.getDriver();
@@ -181,8 +179,7 @@ public class TripService {
     // DRIVER
     public DriverSearchDTO driverRequest(){
 
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        Driver driver = driverRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
+        Driver driver = getDriver();
         UserStatus dStatus = driver.getStatus();
         checkUserStatus(dStatus, "Driver already has a trip process.", UserStatus.NONE);
 
@@ -194,8 +191,7 @@ public class TripService {
 
     public DriverSearchDTO driverSearch(){
         
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        Driver driver = driverRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
+        Driver driver = getDriver();
         UserStatus dStatus = driver.getStatus();
         checkUserStatus(dStatus, "The driver is not in searching status.", UserStatus.SEARCHING);
         return getDriverSearchDTO(driver.getLocation());
@@ -204,8 +200,7 @@ public class TripService {
 
     public ResponseEntity<String> driverPick(Long tripRequestID){
 
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        Driver driver = driverRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
+        Driver driver = getDriver();
         UserStatus dStatus = driver.getStatus();
         checkUserStatus(dStatus, "The driver is not in searching status.", UserStatus.SEARCHING);
 
@@ -240,8 +235,43 @@ public class TripService {
         return ResponseEntity.ok().body("Driver has successfully accepted the travel request");
     }
 
-    public void driverStatus(){
+    public DriverStatusDTO driverStatus(){
 
+        Driver driver = getDriver();
+        UserStatus dStatus = driver.getStatus();
+
+        if (dStatus == UserStatus.NONE) {
+            return DriverStatusDTO.builder().info("Vakhe ye kari kon yare.").build();
+        } else if (dStatus == UserStatus.SEARCHING) {
+            return DriverStatusDTO.builder().info("Searching for trip requests").build();
+        } else { // ACTIVE
+
+            Trip trip = tripRepository.findLastTripByDriverId(driver.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip not found."));
+            TripStatus tripStatus = trip.getStatus();
+            String info;
+
+            if (tripStatus == TripStatus.WAITING) {
+                info = "Driver is going to pick up the passenger.";
+            } else if (tripStatus == TripStatus.ON_GOING) {
+                info = "Driver is going to destination.";
+            } else {
+                throw new CustomResourceNotFoundException("No in-progress trip found.");
+            }
+            
+            TripRequest tr = trip.getTripRequest();
+            Passenger passenger = tr.getPassenger();
+
+            return DriverStatusDTO.builder()
+                .info(info)
+                .status(trip.getStatus().name())
+                .fare(tr.getFare())
+                .start_point(tr.getStartPoint())
+                .end_point(tr.getEndPoint())
+                .current_location(driver.getLocation())
+                .passenger_name(passenger.getName())
+                .passenger_phone(passenger.getPhone())
+                .build();
+        }
     }
 
     public void driverCancel(){
@@ -307,6 +337,16 @@ public class TripService {
         if (!match) {
             throw new CustomBadRequestException(msg);
         }
+    }
+
+    private Passenger getPassenger() {
+        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return passengerRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
+    }
+
+    private Driver getDriver() {
+        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        return driverRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
     }
 
 }

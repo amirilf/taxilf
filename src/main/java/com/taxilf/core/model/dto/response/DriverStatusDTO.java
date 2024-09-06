@@ -14,17 +14,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-public class PassengerStatusDTO {
-    
+public class DriverStatusDTO {
+
     String info;
     String status; // TODO
     Double fare;
-    String vehicle_type;
     Point start_point;
     Point end_point;
-    Point driver_location;
-    String driver_name;
-    String driver_phone;
+    Point current_location;
+    String passenger_name;
+    String passenger_phone;
     Integer estimated_time; // TODO
 
 }

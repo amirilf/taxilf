@@ -2,6 +2,8 @@ package com.taxilf.core.model.entity;
 
 import java.time.LocalDateTime;
 
+import org.hibernate.annotations.CreationTimestamp;
+
 import com.taxilf.core.model.enums.TripStatus;
 
 import jakarta.persistence.Column;
@@ -41,6 +43,10 @@ public class Trip {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_request_id", nullable = false)
     private TripRequest tripRequest;
+
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime timestamp;
 
     @Column(name = "start_time", nullable = true)
     private LocalDateTime startTime;
