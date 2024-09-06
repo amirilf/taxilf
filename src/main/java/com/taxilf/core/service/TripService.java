@@ -1,5 +1,7 @@
 package com.taxilf.core.service;
 
+import java.util.Arrays;
+
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -11,11 +13,18 @@ import com.taxilf.core.exception.CustomBadRequestException;
 import com.taxilf.core.exception.CustomResourceNotFoundException;
 import com.taxilf.core.model.dto.request.TripPointDTO;
 import com.taxilf.core.model.dto.request.TripRequestDTO;
+import com.taxilf.core.model.dto.response.PassengerStatusDTO;
+import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
+import com.taxilf.core.model.entity.Trip;
 import com.taxilf.core.model.entity.TripRequest;
 import com.taxilf.core.model.entity.VehicleType;
+import com.taxilf.core.model.enums.TripRequestStatus;
+import com.taxilf.core.model.enums.TripStatus;
 import com.taxilf.core.model.enums.UserStatus;
+import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
+import com.taxilf.core.model.repository.TripRepository;
 import com.taxilf.core.model.repository.TripRequestRepository;
 import com.taxilf.core.model.repository.VehicleTypeRepository;
 import com.taxilf.core.utility.GeometryUtils;
@@ -24,15 +33,25 @@ import com.taxilf.core.utility.GeometryUtils;
 public class TripService {
 
     private final PassengerRepository passengerRepository;
+    private final DriverRepository driverRepository;
     private final PassengerService passengerService;
+    private final TripRepository tripRepository;
     private final VehicleTypeRepository vehicleTypeRepository;
     private final TripRequestRepository tripRequestRepository;
 
     private static final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    TripService(PassengerService passengerService, PassengerRepository passengerRepository, VehicleTypeRepository vehicleTypeRepository, TripRequestRepository tripRequestRepository) {
+    TripService(PassengerService passengerService, 
+                PassengerRepository passengerRepository, 
+                DriverRepository driverRepository,
+                TripRepository tripRepository,
+                VehicleTypeRepository vehicleTypeRepository, 
+                TripRequestRepository tripRequestRepository
+    ) {
         this.passengerService = passengerService;
         this.passengerRepository = passengerRepository;
+        this.driverRepository = driverRepository;
+        this.tripRepository = tripRepository;
         this.vehicleTypeRepository = vehicleTypeRepository;
         this.tripRequestRepository = tripRequestRepository;
     }
@@ -45,12 +64,12 @@ public class TripService {
         return GeometryUtils.calculateFare(startPoint, endPoint);
     }
 
-
     public ResponseEntity<String> passengerRequest(TripRequestDTO tripRequestDTO) {
 
         Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
         Passenger passenger = passengerRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
-        checkUserStatus(passenger.getStatus(), UserStatus.NONE, "Passenger already has a trip process.");
+        UserStatus pStatus = passenger.getStatus();
+        checkUserStatus(pStatus, "Passenger already has a trip process.", UserStatus.NONE);
 
         // vehicle type
         VehicleType vt = vehicleTypeRepository.findByName(tripRequestDTO.getVehicle_type()).orElseThrow( () -> new CustomResourceNotFoundException("Vehicle type not found."));
@@ -62,10 +81,96 @@ public class TripService {
         TripRequest tripRequest = TripRequest.builder().passenger(passenger).vehicleType(vt).fare(tripRequestDTO.getFare()).startPoint(sPoint).endPoint(ePoint).build();
         tripRequestRepository.save(tripRequest);
 
+        // change status
+        passenger.setStatus(UserStatus.SEARCHING);
+        passengerRepository.save(passenger);
+
         return ResponseEntity.ok().body("Trip request has been saved.");
         
     }
 
+    public PassengerStatusDTO passengerStatus() {
+        
+        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        Passenger passenger = passengerRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
+        UserStatus pStatus = passenger.getStatus();
+        
+        if (pStatus == UserStatus.NONE) {
+            return PassengerStatusDTO.builder().info("You don't have any trip process.").build();
+        } else if (pStatus == UserStatus.SEARCHING) {
+            
+            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            return PassengerStatusDTO.builder()
+                .info("Searching for a driver.")
+                .fare(tripRequest.getFare())
+                .start_point(tripRequest.getStartPoint())
+                .end_point(tripRequest.getEndPoint())
+                .vehicle_type(tripRequest.getVehicleType().getName())
+                .build();
+
+        } else { // ACTIVE
+
+            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            Trip trip = tripRequest.getTrip();
+            Driver driver = trip.getDriver();
+
+            return PassengerStatusDTO.builder()
+                .info(trip.getStatus() == TripStatus.WAITING ? "Driver is comming." : "On going to destination.")
+                .fare(tripRequest.getFare())
+                .start_point(tripRequest.getStartPoint())
+                .end_point(tripRequest.getEndPoint())
+                .vehicle_type(tripRequest.getVehicleType().getName())
+                .driver_name(driver.getName())
+                .driver_phone(driver.getPhone())
+                .driver_location(driver.getLocation())
+                .build();
+        }
+
+    }
+
+    public ResponseEntity<String> passengerCancel() {
+
+        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        Passenger passenger = passengerRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
+        UserStatus pStatus = passenger.getStatus();
+        checkUserStatus(pStatus, "Passenger doesn't have a trip process to cancel.", UserStatus.SEARCHING, UserStatus.ACTIVE);
+
+        if (pStatus == UserStatus.SEARCHING) {
+            
+            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            tripRequest.setStatus(TripRequestStatus.CANCELED);
+            tripRequestRepository.save(tripRequest);
+
+            passenger.setStatus(UserStatus.NONE);
+            passengerRepository.save(passenger);
+
+            return ResponseEntity.ok().body("Trip request has been successfully canceled.");
+
+        } else { // ACTIVE
+
+            TripRequest tripRequest = tripRequestRepository.findLastFoundedTripRequestByPassengerId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            Trip trip = tripRequest.getTrip();
+            TripStatus tripStatus = trip.getStatus();
+            Driver driver = trip.getDriver();
+
+            if (tripStatus == TripStatus.WAITING) {
+
+                passenger.setStatus(UserStatus.NONE);
+                passengerRepository.save(passenger);
+
+                driver.setStatus(UserStatus.SEARCHING);
+                driverRepository.save(driver);
+
+                trip.setStatus(TripStatus.CANCELED_BY_PASSENGER);
+                tripRepository.save(trip);
+
+                return ResponseEntity.ok().body("Trip has been successfully canceled.");
+
+            } else {
+                return ResponseEntity.badRequest().body("Passenger is on way & can not cancel the trip.");
+            }
+        }
+    }
 
     // util methods
     private Point getPoint(Double lon, Double lat, String name) {
@@ -83,11 +188,13 @@ public class TripService {
         return point;
     }
 
-    private void checkUserStatus(UserStatus userStatus, UserStatus desiredStatus, String msg) {
-
-        if (userStatus != desiredStatus) {
+    private void checkUserStatus(UserStatus currentStatus, String msg, UserStatus... desiredStatuses) {
+        
+        boolean match = Arrays.stream(desiredStatuses).anyMatch(status -> status == currentStatus);
+        
+        if (!match) {
             throw new CustomBadRequestException(msg);
         }
-
     }
+
 }

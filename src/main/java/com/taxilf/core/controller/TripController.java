@@ -8,13 +8,10 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import com.taxilf.core.model.dto.request.TripPointDTO;
 import com.taxilf.core.model.dto.request.TripRequestDTO;
+import com.taxilf.core.model.dto.response.PassengerStatusDTO;
 import com.taxilf.core.service.TripService;
 
 import jakarta.validation.Valid;
-
-import org.springframework.web.bind.annotation.RequestParam;
-
-
 
 @RestController
 @RequestMapping("/trip")
@@ -37,13 +34,13 @@ public class TripController {
     }
 
     @GetMapping("/passenger/status")
-    public String passengerStatus(@RequestParam String param) {
-        return new String();
+    public PassengerStatusDTO passengerStatus() {
+        return tripService.passengerStatus();
     }
 
     @GetMapping("/passenger/cancel")
-    public String passengerCancel(@RequestParam String param) {
-        return new String();
+    public ResponseEntity<String> passengerCancel() {
+        return tripService.passengerCancel();
     }
 
 }
