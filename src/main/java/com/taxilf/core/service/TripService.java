@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.taxilf.core.exception.CustomBadRequestException;
+import com.taxilf.core.exception.CustomConflictException;
 import com.taxilf.core.exception.CustomResourceNotFoundException;
 import com.taxilf.core.model.dto.request.TripPointDTO;
 import com.taxilf.core.model.dto.request.TripRequestDTO;
@@ -201,6 +202,44 @@ public class TripService {
 
     }
 
+    public ResponseEntity<String> driverPick(Long tripRequestID){
+
+        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        Driver driver = driverRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
+        UserStatus dStatus = driver.getStatus();
+        checkUserStatus(dStatus, "The driver is not in searching status.", UserStatus.SEARCHING);
+
+        TripRequest tr = tripRequestRepository.findById(tripRequestID).orElseThrow( () -> new CustomResourceNotFoundException("TripRequest not found."));
+        TripRequestStatus trStatus = tr.getStatus();
+        
+        if (trStatus == TripRequestStatus.CANCELED) {
+            throw new CustomResourceNotFoundException("TripRequest not found.");
+        } else if (trStatus == TripRequestStatus.FOUND) {
+            throw new CustomConflictException("TripRequest already taken by other driver.");
+        }
+
+        // create trip obj
+        Trip trip = Trip.builder().driver(driver).tripRequest(tr).build();
+        
+        // update tripRequest obj
+        tr.setStatus(TripRequestStatus.FOUND);
+        
+        // update Passenger
+        Passenger passenger = tr.getPassenger();
+        passenger.setStatus(UserStatus.ACTIVE);
+
+        // update driver
+        driver.setStatus(UserStatus.ACTIVE);
+
+        // save everything in db
+        tripRequestRepository.save(tr);
+        tripRepository.save(trip);
+        passengerRepository.save(passenger);
+        driverRepository.save(driver);
+
+        return ResponseEntity.ok().body("Driver has successfully accepted the travel request");
+    }
+
     public void driverStatus(){
 
     }
@@ -209,9 +248,6 @@ public class TripService {
 
     }
 
-    public void driverPick(){
-
-    }
 
     public void driverOnBoard(){
         

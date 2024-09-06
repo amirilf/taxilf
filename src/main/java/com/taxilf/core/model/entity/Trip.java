@@ -1,5 +1,7 @@
 package com.taxilf.core.model.entity;
 
+import java.time.LocalDateTime;
+
 import com.taxilf.core.model.enums.TripStatus;
 
 import jakarta.persistence.Column;
@@ -40,10 +42,12 @@ public class Trip {
     @JoinColumn(name = "trip_request_id", nullable = false)
     private TripRequest tripRequest;
 
-    // in minutes
-    @Column(name = "time", nullable = true)
-    private Integer time;
-    
+    @Column(name = "start_time", nullable = true)
+    private LocalDateTime startTime;
+
+    @Column(name = "end_time", nullable = true)
+    private LocalDateTime endTime;
+
     @Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
