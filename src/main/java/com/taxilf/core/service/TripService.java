@@ -1,6 +1,8 @@
 package com.taxilf.core.service;
 
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -13,6 +15,8 @@ import com.taxilf.core.exception.CustomBadRequestException;
 import com.taxilf.core.exception.CustomResourceNotFoundException;
 import com.taxilf.core.model.dto.request.TripPointDTO;
 import com.taxilf.core.model.dto.request.TripRequestDTO;
+import com.taxilf.core.model.dto.response.DriverSearchDTO;
+import com.taxilf.core.model.dto.response.DriverTripRequestDTO;
 import com.taxilf.core.model.dto.response.PassengerStatusDTO;
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
@@ -28,6 +32,7 @@ import com.taxilf.core.model.repository.TripRepository;
 import com.taxilf.core.model.repository.TripRequestRepository;
 import com.taxilf.core.model.repository.VehicleTypeRepository;
 import com.taxilf.core.utility.GeometryUtils;
+import com.taxilf.core.utility.Variables;
 
 @Service
 public class TripService {
@@ -64,6 +69,7 @@ public class TripService {
         return GeometryUtils.calculateFare(startPoint, endPoint);
     }
 
+    // PASSENGER
     public ResponseEntity<String> passengerRequest(TripRequestDTO tripRequestDTO) {
 
         Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -125,7 +131,6 @@ public class TripService {
                 .driver_location(driver.getLocation())
                 .build();
         }
-
     }
 
     public ResponseEntity<String> passengerCancel() {
@@ -172,7 +177,78 @@ public class TripService {
         }
     }
 
+    // DRIVER
+    public DriverSearchDTO driverRequest(){
+
+        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        Driver driver = driverRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
+        UserStatus dStatus = driver.getStatus();
+        checkUserStatus(dStatus, "Driver already has a trip process.", UserStatus.NONE);
+
+        driver.setStatus(UserStatus.SEARCHING);
+        driverRepository.save(driver);
+
+        return getDriverSearchDTO(driver.getLocation());
+    }
+
+    public DriverSearchDTO driverSearch(){
+        
+        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
+        Driver driver = driverRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
+        UserStatus dStatus = driver.getStatus();
+        checkUserStatus(dStatus, "The driver is not in searching status.", UserStatus.SEARCHING);
+        return getDriverSearchDTO(driver.getLocation());
+
+    }
+
+    public void driverStatus(){
+
+    }
+
+    public void driverCancel(){
+
+    }
+
+    public void driverPick(){
+
+    }
+
+    public void driverOnBoard(){
+        
+    }
+
+    public void driverDone(){
+
+    }
+
+    public void driverCasheConfirm(){
+
+    }
+
     // util methods
+
+    private DriverSearchDTO getDriverSearchDTO(Point point) {
+        
+        // retriving near triprequest.
+        List<TripRequest> tripRequests = tripRequestRepository.findPendingTripRequestsAroundLocation(point.getX(), point.getY(), Variables.TRIP_RADIUS_KM); 
+        
+        return DriverSearchDTO.builder()
+            .info("Searching for trip requests.")
+            .number_of_requests(tripRequests.size())
+            .radius(Variables.TRIP_RADIUS_KM)
+            .requests(
+                tripRequests.stream()
+                .map((TripRequest tr) -> DriverTripRequestDTO.builder()
+                    .id(tr.getId())
+                    .start_point(tr.getStartPoint())
+                    .end_point(tr.getEndPoint())
+                    .fare(tr.getFare())
+                    .build())
+                .collect(Collectors.toList())
+            )
+            .build();
+    }
+
     private Point getPoint(Double lon, Double lat, String name) {
         
         Point point;

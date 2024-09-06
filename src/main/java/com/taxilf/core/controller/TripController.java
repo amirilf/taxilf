@@ -5,9 +5,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import com.taxilf.core.model.dto.request.TripPointDTO;
 import com.taxilf.core.model.dto.request.TripRequestDTO;
+import com.taxilf.core.model.dto.response.DriverSearchDTO;
 import com.taxilf.core.model.dto.response.PassengerStatusDTO;
 import com.taxilf.core.service.TripService;
 
@@ -28,7 +30,9 @@ public class TripController {
         return tripService.getFare(tripPointDTO);
     }
 
-    @GetMapping("/passenger/request")
+
+    // PASSENGER
+    @PostMapping("/passenger/request")
     public ResponseEntity<String> passengerRequest(@Valid @RequestBody TripRequestDTO tripRequestDTO) {
         return tripService.passengerRequest(tripRequestDTO);
     }
@@ -38,9 +42,22 @@ public class TripController {
         return tripService.passengerStatus();
     }
 
-    @GetMapping("/passenger/cancel")
+    @PostMapping("/passenger/cancel")
     public ResponseEntity<String> passengerCancel() {
         return tripService.passengerCancel();
     }
+
+    
+    // DRIVER
+    @PostMapping("/driver/request")
+    public DriverSearchDTO driverRequest() {
+        return tripService.driverRequest();
+    }
+
+    @PostMapping("/driver/search")
+    public DriverSearchDTO driverSearch() {
+        return tripService.driverSearch();
+    }
+    
 
 }

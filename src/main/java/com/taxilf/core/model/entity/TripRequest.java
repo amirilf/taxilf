@@ -2,7 +2,6 @@ package com.taxilf.core.model.entity;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.locationtech.jts.geom.Point;
-import org.locationtech.jts.geom.impl.PackedCoordinateSequence.Double;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.taxilf.core.model.enums.TripRequestStatus;

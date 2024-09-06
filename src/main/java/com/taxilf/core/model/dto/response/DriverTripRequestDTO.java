@@ -2,8 +2,6 @@ package com.taxilf.core.model.dto.response;
 
 import org.locationtech.jts.geom.Point;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,17 +11,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@JsonInclude(JsonInclude.Include.NON_NULL)
-public class PassengerStatusDTO {
+public class DriverTripRequestDTO {
     
-    String info;
-    Double fare;
+    Long id;
     Point start_point;
     Point end_point;
-    String vehicle_type;
-    String driver_name;
-    String driver_phone;
-    Point driver_location;
-    Integer estimated_time;
+    Double fare;
 
 }

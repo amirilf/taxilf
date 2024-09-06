@@ -33,4 +33,6 @@ public class Variables {
     public static final double MASHHAD_LAT = 36.31;
     public static final double MASHHAD_LON = 59.59;
 
+    public static final double TRIP_RADIUS_KM = 1;
+
 }
