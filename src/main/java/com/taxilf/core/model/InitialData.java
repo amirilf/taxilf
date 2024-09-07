@@ -11,6 +11,7 @@ import com.taxilf.core.model.entity.User;
 import com.taxilf.core.model.entity.Vehicle;
 import com.taxilf.core.model.entity.VehicleSubtype;
 import com.taxilf.core.model.entity.VehicleType;
+import com.taxilf.core.model.entity.Wallet;
 import com.taxilf.core.model.enums.Role;
 import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
@@ -88,27 +89,28 @@ public class InitialData implements CommandLineRunner {
         // drivers & vehicles
         for (int i = 1; i <= 20; i++) {
             
-            Vehicle v = Vehicle.builder()
-                .vehicleSubtype(listOfVehicleSubtypes[random.nextInt(0,8)])
-                .model(random.nextInt(2000,2024))
-                .plate(String.valueOf(1000 + i))
-                .build();
-
+            Wallet wallet = Wallet.builder().build();
             User user = User.builder()
                 .name("D" + i)
                 .phone("10" + i)
                 .location(GeometryUtils.randomPointInMashhad())
                 .role(Role.DRIVER)
+                .wallet(wallet)
                 .build();
+            wallet.setUser(user);
+            userRepository.save(user);
         
+            Vehicle v = Vehicle.builder()
+                .vehicleSubtype(listOfVehicleSubtypes[random.nextInt(0,8)])
+                .model(random.nextInt(2000,2024))
+                .plate(String.valueOf(1000 + i))
+                .build();
             Driver d = Driver.builder()
                 .vehicle(v)
                 .user(user)
                 .build();
-                
             v.setDriver(d);
 
-            userRepository.save(user);
             driverRepository.save(d); // vehicle will be save too (cascade)              
         }
     }
@@ -117,20 +119,22 @@ public class InitialData implements CommandLineRunner {
 
         for (int i = 1; i <= 10; i++) {
 
+            Wallet wallet = Wallet.builder().build();
             User user = User.builder()
                 .name("P" + i)
                 .phone("20" + i)
                 .location(GeometryUtils.randomPointInMashhad())
                 .role(Role.PASSENGER)
+                .wallet(wallet)
                 .build();
+            wallet.setUser(user);
+            userRepository.save(user); // will also save Wallet
 
             Passenger passenger = Passenger.builder()
                 .user(user)
                 .build();
-
             // personal locations
             List<PersonalLocation> locations = new ArrayList<>();
-            
             for (int j = 1; j <= 4; j++) {
                 PersonalLocation location = PersonalLocation.builder()
                     .name("l" + j + "p" + i)
@@ -139,9 +143,7 @@ public class InitialData implements CommandLineRunner {
                     .build();
                 locations.add(location);
             }
-
-            userRepository.save(user);
-            passengerRepository.save(passenger);
+            passengerRepository.save(passenger); // will also save pls
         }
     }
 }

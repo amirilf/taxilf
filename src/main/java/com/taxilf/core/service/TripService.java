@@ -10,7 +10,6 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.taxilf.core.exception.CustomBadRequestException;
@@ -29,7 +28,6 @@ import com.taxilf.core.model.entity.Trip;
 import com.taxilf.core.model.entity.TripRequest;
 import com.taxilf.core.model.entity.User;
 import com.taxilf.core.model.entity.VehicleType;
-import com.taxilf.core.model.enums.Role;
 import com.taxilf.core.model.enums.TripRequestStatus;
 import com.taxilf.core.model.enums.TripStatus;
 import com.taxilf.core.model.enums.UserStatus;
@@ -39,6 +37,7 @@ import com.taxilf.core.model.repository.TripRepository;
 import com.taxilf.core.model.repository.TripRequestRepository;
 import com.taxilf.core.model.repository.UserRepository;
 import com.taxilf.core.model.repository.VehicleTypeRepository;
+import com.taxilf.core.model.security.CustomUserPrincipal;
 import com.taxilf.core.utility.GeometryUtils;
 import com.taxilf.core.utility.Variables;
 
@@ -83,22 +82,8 @@ public class TripService {
 
     public ResponseEntity<String> updateLocation(PointDTO point) {
         
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String role = auth.getAuthorities().iterator().next().getAuthority();
-        String id = auth.getName();
-
-        User user;
-
-        if (role.equals(Role.PASSENGER.name())) {
-            Passenger passenger = passengerRepository.findById(Long.parseLong(id)).orElseThrow(() -> new CustomResourceNotFoundException("Passenger not found."));
-            user = passenger.getUser();
-        } else if (role.equals(Role.DRIVER.name())) {
-            Driver driver = driverRepository.findById(Long.parseLong(id)).orElseThrow(() -> new CustomResourceNotFoundException("Driver not found."));
-            user = driver.getUser();
-        } else {
-            throw new CustomResourceNotFoundException("Not found.");
-        }
-
+        CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User user = userRepository.findById(cup.getUserId()).orElseThrow(() -> new CustomResourceNotFoundException("User not found.")); 
         user.setLocation(geometryFactory.createPoint(new Coordinate(point.getLon(), point.getLat())));
         userRepository.save(user);
         return ResponseEntity.ok().body("Location updated.");
@@ -452,13 +437,13 @@ public class TripService {
     }
 
     private Passenger getPassenger() {
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        return passengerRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
+        CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return passengerRepository.findById(cup.getId()).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
     }
 
     private Driver getDriver() {
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        return driverRepository.findById(id).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
+        CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return driverRepository.findById(cup.getId()).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
     }
 
 }

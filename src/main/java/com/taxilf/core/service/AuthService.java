@@ -16,6 +16,7 @@ import com.taxilf.core.model.dto.request.RegisterDTO;
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
 import com.taxilf.core.model.entity.User;
+import com.taxilf.core.model.entity.Wallet;
 import com.taxilf.core.model.enums.Gender;
 import com.taxilf.core.model.enums.Role;
 import com.taxilf.core.model.repository.DriverRepository;
@@ -49,6 +50,7 @@ public class AuthService {
         }
         
         Long id;
+        Long userId;
         String name = registerDTO.getName();
         String gender = registerDTO.getGender();
         String phone = registerDTO.getPhone();
@@ -58,19 +60,24 @@ public class AuthService {
         // check otp
         otpCheck(phone, code);
 
-        if (role.equals(Role.PASSENGER.name())) {
-            
-            if (passengerRepository.existsByPhone(phone)) {
-                throw new CustomBadRequestException("Phone number is already registered.");
-            }
+        if (userRepository.existsByPhone(phone)) {
+            throw new CustomBadRequestException("Phone number is already registered.");
+        }
 
-            User user = User.builder()
-                .name(name)
-                .phone(phone)
-                .gender(gender != null ? Gender.valueOf(gender) : Gender.NONE)
-                .location(GeometryUtils.randomPointInMashhad())
-                .role(Role.PASSENGER)
-                .build();
+        Wallet wallet = new Wallet();
+        User user = User.builder()
+            .name(name)
+            .phone(phone)
+            .gender(gender != null ? Gender.valueOf(gender) : Gender.NONE)
+            .location(GeometryUtils.randomPointInMashhad())
+            .wallet(wallet)
+            .build();
+        wallet.setUser(user);
+
+
+        if (role.equals(Role.PASSENGER.name())) {
+
+            user.setRole(Role.PASSENGER);
             
             Passenger passenger = Passenger.builder()
                 .user(user)
@@ -79,20 +86,11 @@ public class AuthService {
             userRepository.save(user);
             passengerRepository.save(passenger);
             id = passenger.getId();  
-        
+            userId = user.getId();
+            
         } else if (role.equals(Role.DRIVER.name())) {
             
-            if (driverRepository.existsByPhone(phone)) {
-                throw new CustomBadRequestException("Phone number is already registered.");
-            }
-
-            User user = User.builder()
-                .name(name)
-                .phone(phone)
-                .location(GeometryUtils.randomPointInMashhad())
-                .gender(gender != null ? Gender.valueOf(gender) : Gender.NONE)
-                .role(Role.DRIVER)
-                .build();
+            user.setRole(Role.DRIVER);
 
             Driver driver = Driver.builder()
                 .user(user)
@@ -101,13 +99,14 @@ public class AuthService {
             userRepository.save(user);
             driverRepository.save(driver);
             id = driver.getId();
+            userId = user.getId();
 
         } else {
             // Admin role
             throw new CustomBadRequestException("Admin registration is not yet supported.");
         }
 
-        String token = jwtService.generateToken(id, role);
+        String token = jwtService.generateToken(id, userId, role);
         return ResponseEntity.ok().body(role.toLowerCase() + " is successfully created\n" + token);
     }
 
@@ -119,6 +118,7 @@ public class AuthService {
         }
 
         Long id;
+        Long userId;
         String phone = loginDTO.getPhone();
         String code = loginDTO.getCode();
         String role = loginDTO.getRole();
@@ -126,21 +126,23 @@ public class AuthService {
         // check otp
         otpCheck(phone, code);
 
+        userId = userRepository.findIdByPhone(phone);
+
         if (role.equals(Role.PASSENGER.name())) {
-            id = passengerRepository.findIdByPhone(phone);
+            id = passengerRepository.findIdByUserId(userId);
         } else if (role.equals(Role.DRIVER.name())) {
-            id = driverRepository.findIdByPhone(phone);
+            id = driverRepository.findIdByUserId(userId);
         } else {
             // Admin role
             throw new CustomBadRequestException("Admin authentication is not yet supported.");
         }
 
-        if (id == null) {
+        if (id == null || userId == null) {
             throw new CustomBadRequestException("Phone number is not registered.");
         }
         
         // generate access token
-        String token = jwtService.generateToken(id, role);
+        String token = jwtService.generateToken(id, userId, role);
         return ResponseEntity.ok("successful " + role.toLowerCase() + " login\n" + token);
     }
 

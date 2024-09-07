@@ -15,6 +15,7 @@ import com.taxilf.core.model.projection.PersonalLocationProjection;
 import com.taxilf.core.model.projection.PointProjection;
 import com.taxilf.core.model.repository.PassengerRepository;
 import com.taxilf.core.model.repository.PersonalLocationRepository;
+import com.taxilf.core.model.security.CustomUserPrincipal;
 
 @Service
 public class PassengerService {
@@ -30,18 +31,18 @@ public class PassengerService {
     }
     
     public PassengerProfileProjection getProfile(){
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        return passengerRepository.findProfileById(id).orElseThrow(() -> new CustomResourceNotFoundException("Passenger not found."));
+        CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return passengerRepository.findProfileById(cup.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Passenger not found."));
     }
 
     public List<PersonalLocationProjection> getPersonalLocations() {
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        return personalLocationRepository.findPersonalLocationsByPassengerId(id);
+        CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return personalLocationRepository.findPersonalLocationsByPassengerId(cup.getId());
     }
 
     public PointProjection getPersonalLocatoinPointProjection(String name) {
-        Long id = Long.parseLong(SecurityContextHolder.getContext().getAuthentication().getName());
-        return personalLocationRepository.findPointByPassengerIdAndName(id, name).orElseThrow( () -> new CustomResourceNotFoundException("Location name " + name + " not found!"));
+        CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return personalLocationRepository.findPointByPassengerIdAndName(cup.getId(), name).orElseThrow( () -> new CustomResourceNotFoundException("Location name " + name + " not found!"));
     }
 
     public Point getPersonalLocationPoint(String name) {

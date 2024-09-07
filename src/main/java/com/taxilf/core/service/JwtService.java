@@ -43,10 +43,11 @@ public class JwtService {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(Variables.SECRET_KEY));
     }
         
-    public String generateToken(Long id,String role){
+    public String generateToken(Long id, Long userId, String role){
 
         Map<String, String> claims = new HashMap<>();
         claims.put("role", role);
+        claims.put("userId", String.valueOf(EncryptionUtils.encode(userId)));
 
         Key key = getKey();
 
@@ -71,11 +72,13 @@ public class JwtService {
         Claims claims = extractAllClaims(token);
         
         String id = String.valueOf(EncryptionUtils.decode(claims.getSubject()));
+        String userId = String.valueOf(EncryptionUtils.decode((String) claims.get("userId")));
         String role = (String) claims.get("role");
 
         Map<String, String> result = new HashMap<>();
         
         result.put("id", id);
+        result.put("userId", userId);
         result.put("role", role);
         
         return result;

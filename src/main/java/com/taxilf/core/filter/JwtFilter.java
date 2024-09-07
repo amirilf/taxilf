@@ -6,14 +6,12 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.taxilf.core.model.security.CustomUserPrincipal;
 import com.taxilf.core.service.JwtService;
 
 import io.jsonwebtoken.ExpiredJwtException;
@@ -51,26 +49,24 @@ public class JwtFilter extends OncePerRequestFilter {
                 
                 String role = (String) claims.get("role");
                 String id = claims.get("id");
+                String userId = claims.get("userId");
                 
                 if (id != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     
-                    UserDetails userDetails = User
-                        .withUsername(id)
-                        .password("")
-                        .authorities(new SimpleGrantedAuthority(role))
-                        .build();
+                    CustomUserPrincipal cup = CustomUserPrincipal.builder().id(Long.parseLong(id)).userId(Long.parseLong(userId)).role(role).build();
                     
-                        if (jwtService.validateToken(token)) {
-                        
+                    if (jwtService.validateToken(token)) {
+                    
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, 
+                            cup, 
                             null, 
-                            userDetails.getAuthorities()
+                            null
                         );
                         
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         
                         SecurityContextHolder.getContext().setAuthentication(authToken);
+                    
                     }
                 }
             }
