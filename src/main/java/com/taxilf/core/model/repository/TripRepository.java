@@ -10,6 +10,6 @@ import com.taxilf.core.model.entity.Trip;
 
 @Repository
 public interface TripRepository extends JpaRepository<Trip, Long> {
-    @Query(value = "SELECT t FROM Trip t WHERE t.driver.id = :driverId ORDER BY t.timestamp DESC")
+    @Query(value = "SELECT t FROM Trip t WHERE t.driver.id = :driverId ORDER BY t.timestamp DESC LIMIT 1")
     Optional<Trip> findLastTripByDriverId(Long driverId);
 }

@@ -5,7 +5,6 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.CreationTimestamp;
 import org.locationtech.jts.geom.Point;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.taxilf.core.model.enums.Gender;
 import com.taxilf.core.model.enums.Role;
 import com.taxilf.core.model.enums.UserStatus;
@@ -64,7 +63,6 @@ public class User {
     private Role role;
 
     @Column(name = "location", columnDefinition = "geometry(Point, 4326)")
-    @JsonIgnore
     private Point location;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)

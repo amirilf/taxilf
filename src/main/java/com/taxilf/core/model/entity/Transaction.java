@@ -61,6 +61,7 @@ public class Transaction {
     @Default
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "trip_id", nullable = true)
+    @JsonIgnore
     private Trip trip = null;
 
 }

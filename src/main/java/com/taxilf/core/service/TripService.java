@@ -133,6 +133,7 @@ public class TripService {
         return ResponseEntity.ok().body("Trip request has been saved.");
     }
 
+    @Transactional
     public PassengerStatusDTO passengerStatus() {
         
         Passenger passenger = getPassenger();
@@ -154,7 +155,7 @@ public class TripService {
 
         } else { // ACTIVE
 
-            TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            TripRequest tripRequest = tripRequestRepository.findLastFoundedTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
             Trip trip = tripRequest.getTrip();
             User uDriver = trip.getDriver().getUser();
 
@@ -245,6 +246,7 @@ public class TripService {
     }
 
     // DRIVER
+    @Transactional
     public DriverSearchDTO driverRequest() {
 
         Driver driver = getDriver();
@@ -258,6 +260,7 @@ public class TripService {
         return getDriverSearchDTO(uDriver.getLocation());
     }
 
+    @Transactional
     public DriverSearchDTO driverSearch() {
         
         Driver driver = getDriver();
@@ -307,6 +310,7 @@ public class TripService {
         return ResponseEntity.ok().body("Driver has successfully accepted the travel request");
     }
 
+    @Transactional
     public DriverStatusDTO driverStatus() {
 
         Driver driver = getDriver();
@@ -364,8 +368,16 @@ public class TripService {
         } else { // ACTIVE
 
             Trip trip = getLastTripByDriverID(driver.getId());
-            User uPassenger = trip.getTripRequest().getPassenger().getUser();
+            
+            if (trip.getStatus() != TripStatus.WAITING) {
+                return ResponseEntity.badRequest().body("Driver can not cancel the trip.");
+            }
 
+            Passenger passenger = trip.getTripRequest().getPassenger();
+            User uPassenger = passenger.getUser();
+            TripRequest tripRequest = tripRequestRepository.findLastFoundedTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+            
+            tripRequest.setStatus(TripRequestStatus.PENDING);
             trip.setStatus(TripStatus.CANCELED_BY_DRIVER);
             uPassenger.setStatus(UserStatus.SEARCHING);
             uDriver.setStatus(UserStatus.NONE);
@@ -373,12 +385,14 @@ public class TripService {
             userRepository.save(uPassenger);
             userRepository.save(uDriver);
             tripRepository.save(trip);
+            tripRequestRepository.save(tripRequest);
 
             return ResponseEntity.ok().body("Trip has been successfully canceled.");
         }
 
     }
 
+    @Transactional
     public ResponseEntity<String> driverOnBoard() {
         
         Driver driver = getDriver();
@@ -387,6 +401,11 @@ public class TripService {
         checkUserStatus(dStatus, "Driver has no trip.", UserStatus.ACTIVE);
 
         Trip trip = getLastTripByDriverID(driver.getId());
+
+        if (trip.getStatus() == TripStatus.ON_GOING) {
+            throw new CustomBadRequestException("Driver has already picked up the passenger.");
+        }
+
         trip.setStatus(TripStatus.ON_GOING);
         trip.setStartTime(LocalDateTime.now());
         tripRepository.save(trip);
@@ -412,12 +431,19 @@ public class TripService {
         // handle transactions
         Wallet dWallet = uDriver.getWallet();
         Wallet pWallet = uPassenger.getWallet();
+        
         if (pWallet.getBalance() < tripRequest.getFare()) {
             // not enough money in passenger's wallet
             // in this state we send notif to driver app to say get money in cash
             // we wait for driver to call /confirm-cashe endpoint
             // then we add cash status transactions in that method
         } else {
+
+            dWallet.setBalance(dWallet.getBalance() + tripRequest.getFare());
+            pWallet.setBalance(pWallet.getBalance() - tripRequest.getFare());
+
+            walletRepository.save(dWallet);
+            walletRepository.save(pWallet);
 
             TransactionStatus ts = TransactionStatus.SUCCESS;
             TransactionType ttd  = TransactionType.DRIVER_TRIP_ADDITION;
@@ -429,6 +455,7 @@ public class TripService {
                 .type(ttd)
                 .timestamp(now)
                 .trip(trip)
+                .wallet(dWallet)
                 .build();
 
             Transaction passengerTransaction = Transaction.builder()
@@ -437,14 +464,13 @@ public class TripService {
                 .type(ttp)
                 .timestamp(now)
                 .trip(trip)
+                .wallet(pWallet)
                 .build();
 
             transactionRepository.save(driverTransaction);
             transactionRepository.save(passengerTransaction);
         }
 
-        dWallet.setBalance(dWallet.getBalance() + tripRequest.getFare());
-        pWallet.setBalance(pWallet.getBalance() - tripRequest.getFare());
         
         uPassenger.setStatus(UserStatus.NONE);
         uDriver.setStatus(UserStatus.NONE);
@@ -455,8 +481,6 @@ public class TripService {
         trip.setEndTime(now);
         trip.setStatus(TripStatus.COMPLETED);
 
-        walletRepository.save(dWallet);
-        walletRepository.save(pWallet);
         userRepository.save(uPassenger);
         userRepository.save(uDriver);
         tripRepository.save(trip);

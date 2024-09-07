@@ -66,6 +66,11 @@ public class TripController {
         return tripService.driverRequest();
     }
 
+    @PostMapping("/driver/cancel")
+    public ResponseEntity<String> driverCancel() {
+        return tripService.driverCancel();
+    }
+
     @PostMapping("/driver/search")
     public DriverSearchDTO driverSearch() {
         return tripService.driverSearch();
@@ -77,7 +82,7 @@ public class TripController {
     }
 
     @GetMapping("/driver/status")
-    public DriverStatusDTO driverPick() {
+    public DriverStatusDTO driverStatus() {
         return tripService.driverStatus();
     }
 
