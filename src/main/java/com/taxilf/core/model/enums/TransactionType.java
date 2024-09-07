@@ -10,6 +10,10 @@ public enum TransactionType {
 
     // enternal
     PASSENGER_TRIP_DEDUCTION,
-    DRIVER_TRIP_ADDITION
+    DRIVER_TRIP_ADDITION,
+
+    // enternal cashe
+    PASSENGER_TRIP_DEDUCTION_CASH,
+    DRIVER_TRIP_ADDITION_CASH
 
 }

@@ -38,6 +38,7 @@ public class PaymentService {
         return PaymentDTO.builder().final_amount(wallet.getBalance()).build();
     }
 
+    @Transactional
     public PaymentDTO deposit(Double amount) {
 
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -67,6 +68,7 @@ public class PaymentService {
 
     }
 
+    @Transactional
     public PaymentDTO withdrawal(Double amount) {
     
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();

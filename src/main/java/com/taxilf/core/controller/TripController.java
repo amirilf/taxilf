@@ -54,6 +54,12 @@ public class TripController {
         return tripService.passengerCancel();
     }
 
+    @PostMapping("/passenger/pay")
+    public ResponseEntity<String> passengerPay() {        
+        return tripService.passengerPay();
+    }
+    
+
     // DRIVER
     @PostMapping("/driver/request")
     public DriverSearchDTO driverRequest() {
@@ -83,6 +89,11 @@ public class TripController {
     @PostMapping("/driver/done")
     public ResponseEntity<String> driverDone() {
         return tripService.driverDone();
+    }
+
+    @PostMapping("/driver/cash-confirm")
+    public void driverCashConfirm() {
+        tripService.driverCashConfirm();
     }
 
 }

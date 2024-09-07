@@ -9,6 +9,7 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -24,22 +25,30 @@ import com.taxilf.core.model.dto.response.DriverTripRequestDTO;
 import com.taxilf.core.model.dto.response.PassengerStatusDTO;
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
+import com.taxilf.core.model.entity.Transaction;
 import com.taxilf.core.model.entity.Trip;
 import com.taxilf.core.model.entity.TripRequest;
 import com.taxilf.core.model.entity.User;
 import com.taxilf.core.model.entity.VehicleType;
+import com.taxilf.core.model.entity.Wallet;
+import com.taxilf.core.model.enums.TransactionStatus;
+import com.taxilf.core.model.enums.TransactionType;
 import com.taxilf.core.model.enums.TripRequestStatus;
 import com.taxilf.core.model.enums.TripStatus;
 import com.taxilf.core.model.enums.UserStatus;
 import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
+import com.taxilf.core.model.repository.TransactionRepository;
 import com.taxilf.core.model.repository.TripRepository;
 import com.taxilf.core.model.repository.TripRequestRepository;
 import com.taxilf.core.model.repository.UserRepository;
 import com.taxilf.core.model.repository.VehicleTypeRepository;
+import com.taxilf.core.model.repository.WalletRepository;
 import com.taxilf.core.model.security.CustomUserPrincipal;
 import com.taxilf.core.utility.GeometryUtils;
 import com.taxilf.core.utility.Variables;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class TripService {
@@ -51,6 +60,8 @@ public class TripService {
     private final TripRepository tripRepository;
     private final VehicleTypeRepository vehicleTypeRepository;
     private final TripRequestRepository tripRequestRepository;
+    private final TransactionRepository transactionRepository;
+    private final WalletRepository walletRepository;
 
     private static final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -61,7 +72,9 @@ public class TripService {
         DriverRepository driverRepository,
         TripRepository tripRepository,
         VehicleTypeRepository vehicleTypeRepository, 
-        TripRequestRepository tripRequestRepository
+        TripRequestRepository tripRequestRepository,
+        TransactionRepository transactionRepository,
+        WalletRepository walletRepository
     ) {
         this.userRepository = userRepository;
         this.passengerService = passengerService;
@@ -70,6 +83,8 @@ public class TripService {
         this.tripRepository = tripRepository;
         this.vehicleTypeRepository = vehicleTypeRepository;
         this.tripRequestRepository = tripRequestRepository;
+        this.transactionRepository = transactionRepository;
+        this.walletRepository = walletRepository;
     }
 
     public Double getFare(TripPointDTO tripPointDTO) {
@@ -92,6 +107,8 @@ public class TripService {
 
 
     // PASSENGER
+
+    @Transactional
     public ResponseEntity<String> passengerRequest(TripRequestDTO tripRequestDTO) {
 
         Passenger passenger = getPassenger();
@@ -101,7 +118,7 @@ public class TripService {
 
         // vehicle type
         VehicleType vt = vehicleTypeRepository.findByName(tripRequestDTO.getVehicle_type()).orElseThrow( () -> new CustomResourceNotFoundException("Vehicle type not found."));
-        
+
         // points
         TripPointDTO tripPointDTO = tripRequestDTO.getTripPoint();
         Point sPoint = getPoint(tripPointDTO.getSlon(), tripPointDTO.getSlat(), tripPointDTO.getSname());
@@ -154,6 +171,7 @@ public class TripService {
         }
     }
 
+    @Transactional
     public ResponseEntity<String> passengerCancel() {
 
         Passenger passenger = getPassenger();
@@ -193,14 +211,41 @@ public class TripService {
                 return ResponseEntity.ok().body("Trip has been successfully canceled.");
 
             } else {
-                return ResponseEntity.badRequest().body("Passenger is on way & can not cancel the trip.");
+                return ResponseEntity.badRequest().body("Passenger can not cancel the trip.");
             }
         }
     }
 
+    @Transactional
+    public ResponseEntity<String> passengerPay() {
+
+        CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User uPassenger = userRepository.findById(cup.getUserId()).orElseThrow(() -> new CustomResourceNotFoundException("User not found."));
+        UserStatus pStatus = uPassenger.getStatus();
+        checkUserStatus(pStatus, "Passenger is not in a trip.", UserStatus.ACTIVE);
+
+        TripRequest tripRequest = tripRequestRepository.findLastFoundedTripRequestByPassengerId(cup.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
+        Wallet wallet = uPassenger.getWallet();
+        
+        // redirect passenger to /payment/deposit to charge its wallet!
+        Double fare = tripRequest.getFare();
+        Double balance = wallet.getBalance();
+        
+        if (fare > balance) {
+            Double need = fare - balance;
+            System.out.println("this amount of money is needed: " + need);
+            // redirect to payment with this amount of money
+            // let's say it is done successfully
+            wallet.setBalance(fare);
+            walletRepository.save(wallet);
+            return ResponseEntity.ok().body("The passenger's wallet has been successfully charged to the amount of the trip");
+        } else {
+            return ResponseEntity.ok().body("Passenger has enough money for this trip.");
+        }
+    }
 
     // DRIVER
-    public DriverSearchDTO driverRequest(){
+    public DriverSearchDTO driverRequest() {
 
         Driver driver = getDriver();
         User uDriver = driver.getUser();
@@ -213,7 +258,7 @@ public class TripService {
         return getDriverSearchDTO(uDriver.getLocation());
     }
 
-    public DriverSearchDTO driverSearch(){
+    public DriverSearchDTO driverSearch() {
         
         Driver driver = getDriver();
         User uDriver = driver.getUser();
@@ -223,6 +268,7 @@ public class TripService {
 
     }
 
+    @Transactional
     public ResponseEntity<String> driverPick(Long tripRequestID){
 
         Driver driver = getDriver();
@@ -261,7 +307,7 @@ public class TripService {
         return ResponseEntity.ok().body("Driver has successfully accepted the travel request");
     }
 
-    public DriverStatusDTO driverStatus(){
+    public DriverStatusDTO driverStatus() {
 
         Driver driver = getDriver();
         User uDriver = driver.getUser();
@@ -301,6 +347,7 @@ public class TripService {
         }
     }
 
+    @Transactional
     public ResponseEntity<String> driverCancel() {
 
         Driver driver = getDriver();
@@ -315,11 +362,6 @@ public class TripService {
             return ResponseEntity.ok().body("Trip request has been successfully canceled.");
 
         } else { // ACTIVE
-
-            // get trip to make cancel by driver
-            // get passenger to update to Searching again
-            // make himself Searching
-            // lock!
 
             Trip trip = getLastTripByDriverID(driver.getId());
             User uPassenger = trip.getTripRequest().getPassenger().getUser();
@@ -337,7 +379,7 @@ public class TripService {
 
     }
 
-    public ResponseEntity<String> driverOnBoard(){
+    public ResponseEntity<String> driverOnBoard() {
         
         Driver driver = getDriver();
         User uDriver = driver.getUser();
@@ -345,17 +387,16 @@ public class TripService {
         checkUserStatus(dStatus, "Driver has no trip.", UserStatus.ACTIVE);
 
         Trip trip = getLastTripByDriverID(driver.getId());
-        
         trip.setStatus(TripStatus.ON_GOING);
         trip.setStartTime(LocalDateTime.now());
-
         tripRepository.save(trip);
 
         return ResponseEntity.ok().body("The driver successfully picked up the passenger");        
 
     }
 
-    public ResponseEntity<String> driverDone(){
+    @Transactional
+    public ResponseEntity<String> driverDone() {
 
         Driver driver = getDriver();
         User uDriver = driver.getUser();
@@ -365,24 +406,67 @@ public class TripService {
         Trip trip = getLastTripByDriverID(driver.getId());
         TripRequest tripRequest = trip.getTripRequest();
         User uPassenger = tripRequest.getPassenger().getUser();
-        
-        // if (false) {
-        //    checking that if the location of driver is near to the dest location or not /:
-        //    and also check for passenger confirm
-        // }
 
+        LocalDateTime now = LocalDateTime.now();
+        
+        // handle transactions
+        Wallet dWallet = uDriver.getWallet();
+        Wallet pWallet = uPassenger.getWallet();
+        if (pWallet.getBalance() < tripRequest.getFare()) {
+            // not enough money in passenger's wallet
+            // in this state we send notif to driver app to say get money in cash
+            // we wait for driver to call /confirm-cashe endpoint
+            // then we add cash status transactions in that method
+        } else {
+
+            TransactionStatus ts = TransactionStatus.SUCCESS;
+            TransactionType ttd  = TransactionType.DRIVER_TRIP_ADDITION;
+            TransactionType ttp  = TransactionType.PASSENGER_TRIP_DEDUCTION;
+
+            Transaction driverTransaction = Transaction.builder()
+                .amount(tripRequest.getFare()) // we dont have any sood yet
+                .status(ts)
+                .type(ttd)
+                .timestamp(now)
+                .trip(trip)
+                .build();
+
+            Transaction passengerTransaction = Transaction.builder()
+                .amount(tripRequest.getFare())
+                .status(ts)
+                .type(ttp)
+                .timestamp(now)
+                .trip(trip)
+                .build();
+
+            transactionRepository.save(driverTransaction);
+            transactionRepository.save(passengerTransaction);
+        }
+
+        dWallet.setBalance(dWallet.getBalance() + tripRequest.getFare());
+        pWallet.setBalance(pWallet.getBalance() - tripRequest.getFare());
+        
         uPassenger.setStatus(UserStatus.NONE);
         uDriver.setStatus(UserStatus.NONE);
+        
         uDriver.setLocation(tripRequest.getEndPoint());
-        trip.setEndTime(LocalDateTime.now());
+        uPassenger.setLocation(tripRequest.getEndPoint());
+        
+        trip.setEndTime(now);
         trip.setStatus(TripStatus.COMPLETED);
 
+        walletRepository.save(dWallet);
+        walletRepository.save(pWallet);
         userRepository.save(uPassenger);
         userRepository.save(uDriver);
         tripRepository.save(trip);
 
         return ResponseEntity.ok().body("Trip ended successfully.");
 
+    }
+
+    public void driverCashConfirm() {
+        // get driver confirmation and save transactions.
     }
 
     // util methods
@@ -438,12 +522,16 @@ public class TripService {
 
     private Passenger getPassenger() {
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return passengerRepository.findById(cup.getId()).orElseThrow( () -> new CustomResourceNotFoundException("Passenger not found."));
+        return getEntityById(cup.getId(), passengerRepository, "Passenger");
     }
 
     private Driver getDriver() {
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return driverRepository.findById(cup.getId()).orElseThrow( () -> new CustomResourceNotFoundException("Driver not found."));
+        return getEntityById(cup.getId(), driverRepository, "Driver");
+    }
+
+    private <T> T getEntityById(Long id, JpaRepository<T, Long> repository, String entityName) {
+        return repository.findById(id).orElseThrow(() -> new CustomResourceNotFoundException(entityName + " not found."));
     }
 
 }
