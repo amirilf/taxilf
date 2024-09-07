@@ -10,6 +10,7 @@ import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import com.taxilf.core.exception.CustomBadRequestException;
@@ -26,7 +27,9 @@ import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
 import com.taxilf.core.model.entity.Trip;
 import com.taxilf.core.model.entity.TripRequest;
+import com.taxilf.core.model.entity.User;
 import com.taxilf.core.model.entity.VehicleType;
+import com.taxilf.core.model.enums.Role;
 import com.taxilf.core.model.enums.TripRequestStatus;
 import com.taxilf.core.model.enums.TripStatus;
 import com.taxilf.core.model.enums.UserStatus;
@@ -34,6 +37,7 @@ import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
 import com.taxilf.core.model.repository.TripRepository;
 import com.taxilf.core.model.repository.TripRequestRepository;
+import com.taxilf.core.model.repository.UserRepository;
 import com.taxilf.core.model.repository.VehicleTypeRepository;
 import com.taxilf.core.utility.GeometryUtils;
 import com.taxilf.core.utility.Variables;
@@ -41,6 +45,7 @@ import com.taxilf.core.utility.Variables;
 @Service
 public class TripService {
 
+    private final UserRepository userRepository;
     private final PassengerRepository passengerRepository;
     private final DriverRepository driverRepository;
     private final PassengerService passengerService;
@@ -50,13 +55,16 @@ public class TripService {
 
     private static final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    TripService(PassengerService passengerService, 
-                PassengerRepository passengerRepository, 
-                DriverRepository driverRepository,
-                TripRepository tripRepository,
-                VehicleTypeRepository vehicleTypeRepository, 
-                TripRequestRepository tripRequestRepository
+    TripService(
+        UserRepository userRepository,
+        PassengerService passengerService, 
+        PassengerRepository passengerRepository, 
+        DriverRepository driverRepository,
+        TripRepository tripRepository,
+        VehicleTypeRepository vehicleTypeRepository, 
+        TripRequestRepository tripRequestRepository
     ) {
+        this.userRepository = userRepository;
         this.passengerService = passengerService;
         this.passengerRepository = passengerRepository;
         this.driverRepository = driverRepository;
@@ -73,12 +81,37 @@ public class TripService {
         return GeometryUtils.calculateFare(startPoint, endPoint);
     }
 
+    public ResponseEntity<String> updateLocation(PointDTO point) {
+        
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String role = auth.getAuthorities().iterator().next().getAuthority();
+        String id = auth.getName();
+
+        User user;
+
+        if (role.equals(Role.PASSENGER.name())) {
+            Passenger passenger = passengerRepository.findById(Long.parseLong(id)).orElseThrow(() -> new CustomResourceNotFoundException("Passenger not found."));
+            user = passenger.getUser();
+        } else if (role.equals(Role.DRIVER.name())) {
+            Driver driver = driverRepository.findById(Long.parseLong(id)).orElseThrow(() -> new CustomResourceNotFoundException("Driver not found."));
+            user = driver.getUser();
+        } else {
+            throw new CustomResourceNotFoundException("Not found.");
+        }
+
+        user.setLocation(geometryFactory.createPoint(new Coordinate(point.getLon(), point.getLat())));
+        userRepository.save(user);
+        return ResponseEntity.ok().body("Location updated.");
+
+    }
+
 
     // PASSENGER
     public ResponseEntity<String> passengerRequest(TripRequestDTO tripRequestDTO) {
 
         Passenger passenger = getPassenger();
-        UserStatus pStatus = passenger.getStatus();
+        User uPassenger = passenger.getUser();
+        UserStatus pStatus = uPassenger.getStatus();
         checkUserStatus(pStatus, "Passenger already has a trip process.", UserStatus.NONE);
 
         // vehicle type
@@ -92,17 +125,17 @@ public class TripService {
         tripRequestRepository.save(tripRequest);
 
         // change status
-        passenger.setStatus(UserStatus.SEARCHING);
-        passengerRepository.save(passenger);
+        uPassenger.setStatus(UserStatus.SEARCHING);
+        userRepository.save(uPassenger);
 
         return ResponseEntity.ok().body("Trip request has been saved.");
-        
     }
 
     public PassengerStatusDTO passengerStatus() {
         
         Passenger passenger = getPassenger();
-        UserStatus pStatus = passenger.getStatus();
+        User uPassenger = passenger.getUser();
+        UserStatus pStatus = uPassenger.getStatus();
         
         if (pStatus == UserStatus.NONE) {
             return PassengerStatusDTO.builder().info("You don't have any trip process.").build();
@@ -121,7 +154,7 @@ public class TripService {
 
             TripRequest tripRequest = tripRequestRepository.findPendingTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
             Trip trip = tripRequest.getTrip();
-            Driver driver = trip.getDriver();
+            User uDriver = trip.getDriver().getUser();
 
             return PassengerStatusDTO.builder()
                 .info(trip.getStatus() == TripStatus.WAITING ? "Driver is comming." : "On going to destination.")
@@ -129,9 +162,9 @@ public class TripService {
                 .start_point(tripRequest.getStartPoint())
                 .end_point(tripRequest.getEndPoint())
                 .vehicle_type(tripRequest.getVehicleType().getName())
-                .driver_name(driver.getName())
-                .driver_phone(driver.getPhone())
-                .driver_location(driver.getLocation())
+                .driver_name(uDriver.getName())
+                .driver_phone(uDriver.getPhone())
+                .driver_location(uDriver.getLocation())
                 .build();
         }
     }
@@ -139,7 +172,8 @@ public class TripService {
     public ResponseEntity<String> passengerCancel() {
 
         Passenger passenger = getPassenger();
-        UserStatus pStatus = passenger.getStatus();
+        User uPassenger = passenger.getUser();
+        UserStatus pStatus = uPassenger.getStatus();
         checkUserStatus(pStatus, "Passenger doesn't have a trip process to cancel.", UserStatus.SEARCHING, UserStatus.ACTIVE);
 
         if (pStatus == UserStatus.SEARCHING) {
@@ -148,8 +182,8 @@ public class TripService {
             tripRequest.setStatus(TripRequestStatus.CANCELED);
             tripRequestRepository.save(tripRequest);
 
-            passenger.setStatus(UserStatus.NONE);
-            passengerRepository.save(passenger);
+            uPassenger.setStatus(UserStatus.NONE);
+            userRepository.save(uPassenger);
 
             return ResponseEntity.ok().body("Trip request has been successfully canceled.");
 
@@ -158,15 +192,15 @@ public class TripService {
             TripRequest tripRequest = tripRequestRepository.findLastFoundedTripRequestByPassengerId(passenger.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip request not found."));
             Trip trip = tripRequest.getTrip();
             TripStatus tripStatus = trip.getStatus();
-            Driver driver = trip.getDriver();
+            User uDriver = trip.getDriver().getUser();
 
             if (tripStatus == TripStatus.WAITING) {
 
-                passenger.setStatus(UserStatus.NONE);
+                uPassenger.setStatus(UserStatus.NONE);
                 passengerRepository.save(passenger);
 
-                driver.setStatus(UserStatus.SEARCHING);
-                driverRepository.save(driver);
+                uDriver.setStatus(UserStatus.SEARCHING);
+                userRepository.save(uDriver);
 
                 trip.setStatus(TripStatus.CANCELED_BY_PASSENGER);
                 tripRepository.save(trip);
@@ -184,28 +218,31 @@ public class TripService {
     public DriverSearchDTO driverRequest(){
 
         Driver driver = getDriver();
-        UserStatus dStatus = driver.getStatus();
+        User uDriver = driver.getUser();
+        UserStatus dStatus = uDriver.getStatus();
         checkUserStatus(dStatus, "Driver already has a trip process.", UserStatus.NONE);
 
-        driver.setStatus(UserStatus.SEARCHING);
-        driverRepository.save(driver);
+        uDriver.setStatus(UserStatus.SEARCHING);
+        userRepository.save(uDriver);
 
-        return getDriverSearchDTO(driver.getLocation());
+        return getDriverSearchDTO(uDriver.getLocation());
     }
 
     public DriverSearchDTO driverSearch(){
         
         Driver driver = getDriver();
-        UserStatus dStatus = driver.getStatus();
+        User uDriver = driver.getUser();
+        UserStatus dStatus = uDriver.getStatus();
         checkUserStatus(dStatus, "The driver is not in searching status.", UserStatus.SEARCHING);
-        return getDriverSearchDTO(driver.getLocation());
+        return getDriverSearchDTO(uDriver.getLocation());
 
     }
 
     public ResponseEntity<String> driverPick(Long tripRequestID){
 
         Driver driver = getDriver();
-        UserStatus dStatus = driver.getStatus();
+        User uDriver = driver.getUser();
+        UserStatus dStatus = uDriver.getStatus();
         checkUserStatus(dStatus, "The driver is not in searching status.", UserStatus.SEARCHING);
 
         TripRequest tr = tripRequestRepository.findById(tripRequestID).orElseThrow( () -> new CustomResourceNotFoundException("TripRequest not found."));
@@ -223,18 +260,18 @@ public class TripService {
         // update tripRequest obj
         tr.setStatus(TripRequestStatus.FOUND);
         
-        // update Passenger
-        Passenger passenger = tr.getPassenger();
-        passenger.setStatus(UserStatus.ACTIVE);
+        // update passenger status
+        User uPassenger = tr.getPassenger().getUser();
+        uPassenger.setStatus(UserStatus.ACTIVE);
 
-        // update driver
-        driver.setStatus(UserStatus.ACTIVE);
+        // update driver status
+        uDriver.setStatus(UserStatus.ACTIVE);
 
-        // save everything in db
+        // save updates
         tripRequestRepository.save(tr);
         tripRepository.save(trip);
-        passengerRepository.save(passenger);
-        driverRepository.save(driver);
+        userRepository.save(uPassenger);
+        userRepository.save(uDriver);
 
         return ResponseEntity.ok().body("Driver has successfully accepted the travel request");
     }
@@ -242,7 +279,8 @@ public class TripService {
     public DriverStatusDTO driverStatus(){
 
         Driver driver = getDriver();
-        UserStatus dStatus = driver.getStatus();
+        User uDriver = driver.getUser();
+        UserStatus dStatus = uDriver.getStatus();
 
         if (dStatus == UserStatus.NONE) {
             return DriverStatusDTO.builder().info("Vakhe ye kari kon yare.").build();
@@ -263,7 +301,7 @@ public class TripService {
             }
             
             TripRequest tr = trip.getTripRequest();
-            Passenger passenger = tr.getPassenger();
+            User uPassenger = tr.getPassenger().getUser();
 
             return DriverStatusDTO.builder()
                 .info(info)
@@ -271,9 +309,9 @@ public class TripService {
                 .fare(tr.getFare())
                 .start_point(tr.getStartPoint())
                 .end_point(tr.getEndPoint())
-                .current_location(driver.getLocation())
-                .passenger_name(passenger.getName())
-                .passenger_phone(passenger.getPhone())
+                .current_location(uDriver.getLocation())
+                .passenger_name(uPassenger.getName())
+                .passenger_phone(uPassenger.getPhone())
                 .build();
         }
     }
@@ -281,13 +319,14 @@ public class TripService {
     public ResponseEntity<String> driverCancel() {
 
         Driver driver = getDriver();
-        UserStatus dStatus = driver.getStatus();
+        User uDriver = driver.getUser();
+        UserStatus dStatus = uDriver.getStatus();
         checkUserStatus(dStatus, "Driver doesn't have a trip process to cancel.", UserStatus.SEARCHING, UserStatus.ACTIVE);
 
         if (dStatus == UserStatus.SEARCHING) {
             
-            driver.setStatus(UserStatus.NONE);
-            driverRepository.save(driver);
+            uDriver.setStatus(UserStatus.NONE);
+            userRepository.save(uDriver);
             return ResponseEntity.ok().body("Trip request has been successfully canceled.");
 
         } else { // ACTIVE
@@ -298,16 +337,14 @@ public class TripService {
             // lock!
 
             Trip trip = getLastTripByDriverID(driver.getId());
-            Passenger passenger = trip.getTripRequest().getPassenger();
+            User uPassenger = trip.getTripRequest().getPassenger().getUser();
 
             trip.setStatus(TripStatus.CANCELED_BY_DRIVER);
-            passenger.setStatus(UserStatus.SEARCHING);
-            driver.setStatus(UserStatus.NONE);
+            uPassenger.setStatus(UserStatus.SEARCHING);
+            uDriver.setStatus(UserStatus.NONE);
 
-            // notif for both of them
-
-            passengerRepository.save(passenger);
-            driverRepository.save(driver);
+            userRepository.save(uPassenger);
+            userRepository.save(uDriver);
             tripRepository.save(trip);
 
             return ResponseEntity.ok().body("Trip has been successfully canceled.");
@@ -318,7 +355,8 @@ public class TripService {
     public ResponseEntity<String> driverOnBoard(){
         
         Driver driver = getDriver();
-        UserStatus dStatus = driver.getStatus();
+        User uDriver = driver.getUser();
+        UserStatus dStatus = uDriver.getStatus();
         checkUserStatus(dStatus, "Driver has no trip.", UserStatus.ACTIVE);
 
         Trip trip = getLastTripByDriverID(driver.getId());
@@ -335,38 +373,30 @@ public class TripService {
     public ResponseEntity<String> driverDone(){
 
         Driver driver = getDriver();
-        UserStatus dStatus = driver.getStatus();
+        User uDriver = driver.getUser();
+        UserStatus dStatus = uDriver.getStatus();
         checkUserStatus(dStatus, "Driver has no trip.", UserStatus.ACTIVE);
 
         Trip trip = getLastTripByDriverID(driver.getId());
         TripRequest tripRequest = trip.getTripRequest();
-        Passenger passenger = tripRequest.getPassenger();
-
+        User uPassenger = tripRequest.getPassenger().getUser();
+        
         // if (false) {
         //    checking that if the location of driver is near to the dest location or not /:
         //    and also check for passenger confirm
         // }
 
-        passenger.setStatus(UserStatus.NONE);
-        driver.setStatus(UserStatus.NONE);
-        driver.setLocation(tripRequest.getEndPoint());
+        uPassenger.setStatus(UserStatus.NONE);
+        uDriver.setStatus(UserStatus.NONE);
+        uDriver.setLocation(tripRequest.getEndPoint());
         trip.setEndTime(LocalDateTime.now());
         trip.setStatus(TripStatus.COMPLETED);
 
-        passengerRepository.save(passenger);
-        driverRepository.save(driver);
+        userRepository.save(uPassenger);
+        userRepository.save(uDriver);
         tripRepository.save(trip);
 
         return ResponseEntity.ok().body("Trip ended successfully.");
-
-    }
-
-    public ResponseEntity<String> driverUpdateLocation(PointDTO point) {
-        
-        Driver driver = getDriver();
-        driver.setLocation(geometryFactory.createPoint(new Coordinate(point.getLon(), point.getLat())));
-        driverRepository.save(driver);
-        return ResponseEntity.ok().body("Location updated.");
 
     }
 

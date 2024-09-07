@@ -33,6 +33,11 @@ public class TripController {
         return tripService.getFare(tripPointDTO);
     }
 
+    @PostMapping("/update-location")
+    public ResponseEntity<String> driverUpdateLocation(@Valid @RequestBody PointDTO point) {
+        return tripService.updateLocation(point);
+    }
+
     // PASSENGER
     @PostMapping("/passenger/request")
     public ResponseEntity<String> passengerRequest(@Valid @RequestBody TripRequestDTO tripRequestDTO) {
@@ -78,11 +83,6 @@ public class TripController {
     @PostMapping("/driver/done")
     public ResponseEntity<String> driverDone() {
         return tripService.driverDone();
-    }
-
-    @PostMapping("/driver/update-location")
-    public ResponseEntity<String> driverUpdateLocation(@Valid @RequestBody PointDTO point) {
-        return tripService.driverUpdateLocation(point);
     }
 
 }

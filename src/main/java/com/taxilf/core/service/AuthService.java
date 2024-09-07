@@ -15,24 +15,28 @@ import com.taxilf.core.model.dto.request.LoginDTO;
 import com.taxilf.core.model.dto.request.RegisterDTO;
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
+import com.taxilf.core.model.entity.User;
 import com.taxilf.core.model.enums.Gender;
 import com.taxilf.core.model.enums.Role;
-import com.taxilf.core.model.enums.UserStatus;
 import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
+import com.taxilf.core.model.repository.UserRepository;
 import com.taxilf.core.utility.EncryptionUtils;
+import com.taxilf.core.utility.GeometryUtils;
 import com.taxilf.core.utility.Variables;
 
 @Service
 public class AuthService {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final UserRepository userRepository;
     private final PassengerRepository passengerRepository;
     private final DriverRepository driverRepository;
     private final JwtService jwtService;
 
-    AuthService(RedisTemplate<String, Object> redisTemplate, PassengerRepository passengerRepository, DriverRepository driverRepository, JwtService jwtService){
+    AuthService(RedisTemplate<String, Object> redisTemplate,UserRepository userRepository, PassengerRepository passengerRepository, DriverRepository driverRepository, JwtService jwtService){
         this.redisTemplate = redisTemplate;
+        this.userRepository = userRepository;
         this.passengerRepository = passengerRepository;
         this.driverRepository = driverRepository;
         this.jwtService = jwtService;
@@ -59,15 +63,20 @@ public class AuthService {
             if (passengerRepository.existsByPhone(phone)) {
                 throw new CustomBadRequestException("Phone number is already registered.");
             }
-            
-            Passenger passenger = Passenger.builder()
+
+            User user = User.builder()
                 .name(name)
                 .phone(phone)
-                .gender(gender != null ? Gender.valueOf(gender) : null)
-                .status(UserStatus.NONE)
+                .gender(gender != null ? Gender.valueOf(gender) : Gender.NONE)
+                .location(GeometryUtils.randomPointInMashhad())
                 .role(Role.PASSENGER)
                 .build();
+            
+            Passenger passenger = Passenger.builder()
+                .user(user)
+                .build();
 
+            userRepository.save(user);
             passengerRepository.save(passenger);
             id = passenger.getId();  
         
@@ -77,14 +86,19 @@ public class AuthService {
                 throw new CustomBadRequestException("Phone number is already registered.");
             }
 
-            Driver driver = Driver.builder()
+            User user = User.builder()
                 .name(name)
                 .phone(phone)
-                .gender(gender != null ? Gender.valueOf(gender) : null)
-                .status(UserStatus.NONE)
+                .location(GeometryUtils.randomPointInMashhad())
+                .gender(gender != null ? Gender.valueOf(gender) : Gender.NONE)
                 .role(Role.DRIVER)
                 .build();
 
+            Driver driver = Driver.builder()
+                .user(user)
+                .build();
+
+            userRepository.save(user);
             driverRepository.save(driver);
             id = driver.getId();
 

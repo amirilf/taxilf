@@ -7,11 +7,14 @@ import org.springframework.stereotype.Component;
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
 import com.taxilf.core.model.entity.PersonalLocation;
+import com.taxilf.core.model.entity.User;
 import com.taxilf.core.model.entity.Vehicle;
 import com.taxilf.core.model.entity.VehicleSubtype;
 import com.taxilf.core.model.entity.VehicleType;
+import com.taxilf.core.model.enums.Role;
 import com.taxilf.core.model.repository.DriverRepository;
 import com.taxilf.core.model.repository.PassengerRepository;
+import com.taxilf.core.model.repository.UserRepository;
 import com.taxilf.core.model.repository.VehicleSubtypeRepository;
 import com.taxilf.core.model.repository.VehicleTypeRepository;
 import com.taxilf.core.utility.GeometryUtils;
@@ -25,6 +28,7 @@ import java.util.Random;
 @Order(1)
 public class InitialData implements CommandLineRunner {
 
+    private final UserRepository userRepository;
     private final PassengerRepository passengerRepository;
     private final DriverRepository driverRepository;
     private final VehicleTypeRepository vehicleTypeRepository;
@@ -32,7 +36,8 @@ public class InitialData implements CommandLineRunner {
 
     private static final Random random = new Random();
 
-    InitialData(PassengerRepository passengerRepository, DriverRepository driverRepository, VehicleTypeRepository vehicleTypeRepository, VehicleSubtypeRepository vehicleSubtypeRepository){
+    InitialData(UserRepository userRepository, PassengerRepository passengerRepository, DriverRepository driverRepository, VehicleTypeRepository vehicleTypeRepository, VehicleSubtypeRepository vehicleSubtypeRepository){
+        this.userRepository = userRepository;
         this.passengerRepository = passengerRepository;
         this.driverRepository = driverRepository;
         this.vehicleTypeRepository = vehicleTypeRepository;
@@ -88,32 +93,44 @@ public class InitialData implements CommandLineRunner {
                 .model(random.nextInt(2000,2024))
                 .plate(String.valueOf(1000 + i))
                 .build();
-            
-            Driver d = Driver.builder()
+
+            User user = User.builder()
                 .name("D" + i)
                 .phone("10" + i)
                 .location(GeometryUtils.randomPointInMashhad())
-                .vehicle(v)
+                .role(Role.DRIVER)
                 .build();
-
+        
+            Driver d = Driver.builder()
+                .vehicle(v)
+                .user(user)
+                .build();
+                
             v.setDriver(d);
 
-            // will create both since we used cascade
-            driverRepository.save(d);
+            userRepository.save(user);
+            driverRepository.save(d); // vehicle will be save too (cascade)              
         }
     }
 
     private void loadPassengers(){
-        
-        List<Passenger> passengers = new ArrayList<>();
 
         for (int i = 1; i <= 10; i++) {
-            Passenger passenger = Passenger.builder()
+
+            User user = User.builder()
                 .name("P" + i)
                 .phone("20" + i)
+                .location(GeometryUtils.randomPointInMashhad())
+                .role(Role.PASSENGER)
                 .build();
 
+            Passenger passenger = Passenger.builder()
+                .user(user)
+                .build();
+
+            // personal locations
             List<PersonalLocation> locations = new ArrayList<>();
+            
             for (int j = 1; j <= 4; j++) {
                 PersonalLocation location = PersonalLocation.builder()
                     .name("l" + j + "p" + i)
@@ -122,11 +139,9 @@ public class InitialData implements CommandLineRunner {
                     .build();
                 locations.add(location);
             }
-            passenger.setPersonalLocations(locations);
-            passengers.add(passenger);
-        }
 
-        // no need for personal locations since using cascade
-        passengerRepository.saveAll(passengers);
+            userRepository.save(user);
+            passengerRepository.save(passenger);
+        }
     }
 }
