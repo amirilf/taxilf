@@ -1,11 +1,11 @@
 package com.taxilf.core.service;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import com.taxilf.core.exception.CustomBadRequestException;
 import com.taxilf.core.exception.CustomResourceNotFoundException;
+import com.taxilf.core.model.dto.response.PaymentDTO;
 import com.taxilf.core.model.entity.Transaction;
 import com.taxilf.core.model.entity.Wallet;
 import com.taxilf.core.model.enums.TransactionStatus;
@@ -25,12 +25,13 @@ public class PaymentService {
         this.transactionRepository = transactionRepository;
     }
     
-    public Double getBalance() {
+    public PaymentDTO getBalance() {
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return walletRepository.findByUserID(cup.getUserId()).orElseThrow(() -> new CustomResourceNotFoundException("Wallet not found.")).getBalance();
+        Wallet wallet = walletRepository.findByUserID(cup.getUserId()).orElseThrow(() -> new CustomResourceNotFoundException("Wallet not found."));
+        return PaymentDTO.builder().final_amount(wallet.getBalance()).build();
     }
 
-    public ResponseEntity<String> deposit(Double amount) {
+    public PaymentDTO deposit(Double amount) {
 
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Wallet wallet = walletRepository.findByUserID(cup.getUserId()).orElseThrow(() -> new CustomResourceNotFoundException("Wallet not found."));
@@ -38,18 +39,28 @@ public class PaymentService {
         wallet.setBalance(newAmount);
         walletRepository.save(wallet);
 
+        TransactionType tt = cup.getRole().equals("PASSENGER") ? TransactionType.PASSENGER_DEPOSIT : TransactionType.DRIVER_DEPOSIT;
+        TransactionStatus ts = TransactionStatus.SUCCESS;
+
         Transaction transaction = Transaction.builder()
             .amount(amount)
-            .status(TransactionStatus.SUCCESS)
-            .type(cup.getRole().equals("PASSENGER") ? TransactionType.PASSENGER_DEPOSIT : TransactionType.DRIVER_DEPOSIT)
+            .status(ts)
+            .type(tt)
             .wallet(wallet)
             .build();
         transactionRepository.save(transaction);
 
-        return ResponseEntity.ok().body("The wallet has been charged successfully. Final amount:" + newAmount);
+        return PaymentDTO.builder()
+            .info("The wallet has been charged successfully.")
+            .final_amount(newAmount)
+            .amount(amount)
+            .status(ts.name())
+            .type(tt.name())
+            .build();
+
     }
 
-    public ResponseEntity<String> withdrawal(Double amount) {
+    public PaymentDTO withdrawal(Double amount) {
     
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         Wallet wallet = walletRepository.findByUserID(cup.getUserId()).orElseThrow(() -> new CustomResourceNotFoundException("Wallet not found."));
@@ -62,14 +73,25 @@ public class PaymentService {
         wallet.setBalance(newAmount);
         walletRepository.save(wallet);
 
+        TransactionType tt = cup.getRole().equals("PASSENGER") ? TransactionType.PASSENGER_WITHDRAWAL : TransactionType.DRIVER_WITHDRAWAL;
+        TransactionStatus ts = TransactionStatus.SUCCESS;
+
         Transaction transaction = Transaction.builder()
             .amount(amount)
-            .status(TransactionStatus.SUCCESS)
-            .type(cup.getRole().equals("PASSENGER") ? TransactionType.PASSENGER_WITHDRAWAL : TransactionType.DRIVER_WITHDRAWAL)
+            .status(ts)
+            .type(tt)
             .wallet(wallet)
             .build();
         transactionRepository.save(transaction);
 
-        return ResponseEntity.ok().body("The amount of " + amount + " has been successfully withdrawn from the wallet. Final amount:" + newAmount);
-    }
+        return PaymentDTO.builder()
+            .info("The amount has been successfully withdrawn from the wallet.")
+            .final_amount(newAmount)
+            .amount(amount)
+            .status(ts.name())
+            .type(tt.name())
+            .build();
+
+        }
+
 }

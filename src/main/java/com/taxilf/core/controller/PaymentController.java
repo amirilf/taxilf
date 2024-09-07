@@ -2,11 +2,13 @@ package com.taxilf.core.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.taxilf.core.model.dto.response.PaymentDTO;
 import com.taxilf.core.service.PaymentService;
 
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
@@ -19,19 +21,22 @@ public class PaymentController {
         this.paymentService = paymentService;
     }
     
+    @ResponseStatus(code = HttpStatus.OK)
     @GetMapping("/balance")
-    public Double balance() {
+    public PaymentDTO balance() {
         return paymentService.getBalance();
     }
 
+    @ResponseStatus(code = HttpStatus.OK)
     @GetMapping("/deposit/{amount}")
-    public ResponseEntity<String> deposit(@RequestParam Double amount) {
-        return null;
+    public PaymentDTO deposit(@RequestParam Double amount) {
+        return paymentService.deposit(amount);
     }
 
+    @ResponseStatus(code = HttpStatus.OK)
     @GetMapping("/withdrawal/{amount}")
-    public ResponseEntity<String> withdrawal(@RequestParam Double amount) {
-        return null;
+    public PaymentDTO withdrawal(@RequestParam Double amount) {
+        return paymentService.withdrawal(amount);
     }
 
     @GetMapping("/transactions")
