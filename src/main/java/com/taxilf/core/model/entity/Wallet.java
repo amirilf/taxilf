@@ -2,6 +2,8 @@ package com.taxilf.core.model.entity;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -33,9 +35,10 @@ public class Wallet {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
 
-    @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "wallet", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private List<Transaction> transactions;
 
     @Default

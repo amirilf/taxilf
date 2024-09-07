@@ -2,6 +2,8 @@ package com.taxilf.core.model.entity;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -34,9 +36,11 @@ public class Passenger {
     private User user;
 
     @OneToMany(mappedBy = "passenger", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<PersonalLocation> personalLocations;
 
     @OneToMany(mappedBy = "passenger", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<TripRequest> tripRequests;
 
 }

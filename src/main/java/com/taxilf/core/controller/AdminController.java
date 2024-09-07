@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.taxilf.core.model.entity.Driver;
 import com.taxilf.core.model.entity.Passenger;
+import com.taxilf.core.model.entity.User;
 import com.taxilf.core.service.AdminService;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,5 +31,11 @@ public class AdminController {
     public List<Driver> getDrivers() {
         return adminService.getDrivers();
     }
+
+    @GetMapping("/users")
+    public List<User> getUsers() {
+        return adminService.getUsers();
+    }
+    
 
 }

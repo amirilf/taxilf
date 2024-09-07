@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.taxilf.core.model.enums.TransactionStatus;
 import com.taxilf.core.model.enums.TransactionType;
 
@@ -39,6 +40,7 @@ public class Transaction {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "wallet_id", nullable = false)
+    @JsonIgnore
     private Wallet wallet;
 
     @Column(name = "amount", nullable = false)

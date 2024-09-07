@@ -20,19 +20,19 @@ import com.taxilf.core.model.security.CustomUserPrincipal;
 @Service
 public class PassengerService {
 
-    private final PassengerRepository passengerRepository;
     private final PersonalLocationRepository personalLocationRepository;
+    private final PassengerRepository passengerRepository;
 
     private static final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
-    PassengerService(PassengerRepository passengerRepository, PersonalLocationRepository personalLocationRepository){
-        this.passengerRepository = passengerRepository;
+    PassengerService(PersonalLocationRepository personalLocationRepository, PassengerRepository passengerRepository) {
         this.personalLocationRepository = personalLocationRepository;
+        this.passengerRepository = passengerRepository;
     }
     
-    public PassengerProfileProjection getProfile(){
+    public PassengerProfileProjection getProfile() {
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return passengerRepository.findProfileById(cup.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Passenger not found."));
+        return passengerRepository.findProfileById(cup.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Passenger not found."));   
     }
 
     public List<PersonalLocationProjection> getPersonalLocations() {
@@ -40,13 +40,14 @@ public class PassengerService {
         return personalLocationRepository.findPersonalLocationsByPassengerId(cup.getId());
     }
 
-    public PointProjection getPersonalLocatoinPointProjection(String name) {
+    public PointProjection getPersonalLocation(String name) {
         CustomUserPrincipal cup = (CustomUserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return personalLocationRepository.findPointByPassengerIdAndName(cup.getId(), name).orElseThrow( () -> new CustomResourceNotFoundException("Location name " + name + " not found!"));
     }
 
+    // util
     public Point getPersonalLocationPoint(String name) {
-        PointProjection pp = getPersonalLocatoinPointProjection(name);
+        PointProjection pp = getPersonalLocation(name);
         return geometryFactory.createPoint(new Coordinate(pp.getLon(), pp.getLat()));
     }
 }

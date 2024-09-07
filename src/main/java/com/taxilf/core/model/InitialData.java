@@ -133,6 +133,7 @@ public class InitialData implements CommandLineRunner {
             Passenger passenger = Passenger.builder()
                 .user(user)
                 .build();
+
             // personal locations
             List<PersonalLocation> locations = new ArrayList<>();
             for (int j = 1; j <= 4; j++) {
@@ -143,6 +144,8 @@ public class InitialData implements CommandLineRunner {
                     .build();
                 locations.add(location);
             }
+            
+            passenger.setPersonalLocations(locations);
             passengerRepository.save(passenger); // will also save pls
         }
     }

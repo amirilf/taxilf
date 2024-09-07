@@ -21,7 +21,7 @@ public class PassengerController {
     PassengerController(PassengerService passengerService){
         this.passengerService = passengerService;
     }
-    
+
     @GetMapping("/profile")
     public PassengerProfileProjection getProfile() {
         return passengerService.getProfile();
@@ -35,8 +35,8 @@ public class PassengerController {
 
     // get PointDTO of a pl
     @GetMapping("/pls/{name}")
-    public PointProjection getPersonalLocatoinPointProjection(@PathVariable String name) {
-        return passengerService.getPersonalLocatoinPointProjection(name);
+    public PointProjection getPersonalLocation(@PathVariable String name) {
+        return passengerService.getPersonalLocation(name);
     }
 
 }

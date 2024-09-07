@@ -16,10 +16,10 @@ public interface PassengerRepository extends JpaRepository<Passenger, Long> {
     Long findIdByUserId(Long userId);
 
     @Query(value = "SELECT " +
-                   "p.name AS name, p.phone AS phone, p.joined_at AS joinedAt, p.gender AS gender " +
-                   "FROM passengers p " +
-                   "WHERE p.id = :id", 
-           nativeQuery = true)
-    Optional<PassengerProfileProjection> findProfileById(Long id);   
-
+            "u.name AS name, u.phone AS phone, u.joined_at AS joinedAt, u.gender AS gender " +
+            "FROM passengers p " +
+            "JOIN users u ON p.user_id = u.id " +
+            "WHERE p.id = :id", 
+        nativeQuery = true)
+    Optional<PassengerProfileProjection> findProfileById(Long id);
 }

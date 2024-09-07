@@ -24,7 +24,7 @@ public class RegisterDTO {
     @Pattern(regexp = Variables.OTP_REGEX, message = "Invalid Code")
     private String code;
 
-    @Pattern(regexp = Variables.USER_DTO_ROLES, message = "Gender must be either MALE or FEMALE")
+    @Pattern(regexp = Variables.USER_DTO_GENDER, message = "Gender must be either MALE or FEMALE")
     private String gender;
 
     @NotBlank

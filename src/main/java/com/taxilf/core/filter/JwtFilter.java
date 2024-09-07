@@ -2,10 +2,12 @@ package com.taxilf.core.filter;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -60,7 +62,7 @@ public class JwtFilter extends OncePerRequestFilter {
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             cup, 
                             null, 
-                            null
+                            Collections.singleton(new SimpleGrantedAuthority(role))
                         );
                         
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
