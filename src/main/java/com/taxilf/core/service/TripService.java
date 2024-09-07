@@ -3,6 +3,7 @@ package com.taxilf.core.service;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import com.taxilf.core.exception.CustomBadRequestException;
 import com.taxilf.core.exception.CustomConflictException;
 import com.taxilf.core.exception.CustomResourceNotFoundException;
+import com.taxilf.core.model.dto.request.PointDTO;
 import com.taxilf.core.model.dto.request.TripPointDTO;
 import com.taxilf.core.model.dto.request.TripRequestDTO;
 import com.taxilf.core.model.dto.response.DriverSearchDTO;
@@ -70,6 +72,7 @@ public class TripService {
 
         return GeometryUtils.calculateFare(startPoint, endPoint);
     }
+
 
     // PASSENGER
     public ResponseEntity<String> passengerRequest(TripRequestDTO tripRequestDTO) {
@@ -176,6 +179,7 @@ public class TripService {
         }
     }
 
+
     // DRIVER
     public DriverSearchDTO driverRequest(){
 
@@ -246,7 +250,7 @@ public class TripService {
             return DriverStatusDTO.builder().info("Searching for trip requests").build();
         } else { // ACTIVE
 
-            Trip trip = tripRepository.findLastTripByDriverId(driver.getId()).orElseThrow(() -> new CustomResourceNotFoundException("Trip not found."));
+            Trip trip = getLastTripByDriverID(driver.getId());
             TripStatus tripStatus = trip.getStatus();
             String info;
 
@@ -274,24 +278,102 @@ public class TripService {
         }
     }
 
-    public void driverCancel(){
+    public ResponseEntity<String> driverCancel() {
+
+        Driver driver = getDriver();
+        UserStatus dStatus = driver.getStatus();
+        checkUserStatus(dStatus, "Driver doesn't have a trip process to cancel.", UserStatus.SEARCHING, UserStatus.ACTIVE);
+
+        if (dStatus == UserStatus.SEARCHING) {
+            
+            driver.setStatus(UserStatus.NONE);
+            driverRepository.save(driver);
+            return ResponseEntity.ok().body("Trip request has been successfully canceled.");
+
+        } else { // ACTIVE
+
+            // get trip to make cancel by driver
+            // get passenger to update to Searching again
+            // make himself Searching
+            // lock!
+
+            Trip trip = getLastTripByDriverID(driver.getId());
+            Passenger passenger = trip.getTripRequest().getPassenger();
+
+            trip.setStatus(TripStatus.CANCELED_BY_DRIVER);
+            passenger.setStatus(UserStatus.SEARCHING);
+            driver.setStatus(UserStatus.NONE);
+
+            // notif for both of them
+
+            passengerRepository.save(passenger);
+            driverRepository.save(driver);
+            tripRepository.save(trip);
+
+            return ResponseEntity.ok().body("Trip has been successfully canceled.");
+        }
 
     }
 
-
-    public void driverOnBoard(){
+    public ResponseEntity<String> driverOnBoard(){
         
+        Driver driver = getDriver();
+        UserStatus dStatus = driver.getStatus();
+        checkUserStatus(dStatus, "Driver has no trip.", UserStatus.ACTIVE);
+
+        Trip trip = getLastTripByDriverID(driver.getId());
+        
+        trip.setStatus(TripStatus.ON_GOING);
+        trip.setStartTime(LocalDateTime.now());
+
+        tripRepository.save(trip);
+
+        return ResponseEntity.ok().body("The driver successfully picked up the passenger");        
+
     }
 
-    public void driverDone(){
+    public ResponseEntity<String> driverDone(){
+
+        Driver driver = getDriver();
+        UserStatus dStatus = driver.getStatus();
+        checkUserStatus(dStatus, "Driver has no trip.", UserStatus.ACTIVE);
+
+        Trip trip = getLastTripByDriverID(driver.getId());
+        TripRequest tripRequest = trip.getTripRequest();
+        Passenger passenger = tripRequest.getPassenger();
+
+        // if (false) {
+        //    checking that if the location of driver is near to the dest location or not /:
+        //    and also check for passenger confirm
+        // }
+
+        passenger.setStatus(UserStatus.NONE);
+        driver.setStatus(UserStatus.NONE);
+        driver.setLocation(tripRequest.getEndPoint());
+        trip.setEndTime(LocalDateTime.now());
+        trip.setStatus(TripStatus.COMPLETED);
+
+        passengerRepository.save(passenger);
+        driverRepository.save(driver);
+        tripRepository.save(trip);
+
+        return ResponseEntity.ok().body("Trip ended successfully.");
 
     }
 
-    public void driverCasheConfirm(){
+    public ResponseEntity<String> driverUpdateLocation(PointDTO point) {
+        
+        Driver driver = getDriver();
+        driver.setLocation(geometryFactory.createPoint(new Coordinate(point.getLon(), point.getLat())));
+        driverRepository.save(driver);
+        return ResponseEntity.ok().body("Location updated.");
 
     }
 
     // util methods
+    private Trip getLastTripByDriverID(Long id) {
+        return tripRepository.findLastTripByDriverId(id).orElseThrow(() -> new CustomResourceNotFoundException("Trip not found."));
+    }
 
     private DriverSearchDTO getDriverSearchDTO(Point point) {
         

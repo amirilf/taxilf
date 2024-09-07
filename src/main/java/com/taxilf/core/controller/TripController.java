@@ -8,9 +8,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 
+import com.taxilf.core.model.dto.request.PointDTO;
 import com.taxilf.core.model.dto.request.TripPointDTO;
 import com.taxilf.core.model.dto.request.TripRequestDTO;
 import com.taxilf.core.model.dto.response.DriverSearchDTO;
+import com.taxilf.core.model.dto.response.DriverStatusDTO;
 import com.taxilf.core.model.dto.response.PassengerStatusDTO;
 import com.taxilf.core.service.TripService;
 
@@ -27,7 +29,7 @@ public class TripController {
     }
 
     @GetMapping("/fare")
-    public Double getMethodName(@RequestBody TripPointDTO tripPointDTO) {
+    public Double getMethodName(@Valid @RequestBody TripPointDTO tripPointDTO) {
         return tripService.getFare(tripPointDTO);
     }
 
@@ -61,6 +63,26 @@ public class TripController {
     @PostMapping("/driver/pick/{id}")
     public ResponseEntity<String> driverPick(@RequestParam Long id) {
         return tripService.driverPick(id);
+    }
+
+    @GetMapping("/driver/status")
+    public DriverStatusDTO driverPick() {
+        return tripService.driverStatus();
+    }
+
+    @PostMapping("/driver/on-board")
+    public ResponseEntity<String> driverOnBoard() {
+        return tripService.driverOnBoard();
+    }
+
+    @PostMapping("/driver/done")
+    public ResponseEntity<String> driverDone() {
+        return tripService.driverDone();
+    }
+
+    @PostMapping("/driver/update-location")
+    public ResponseEntity<String> driverUpdateLocation(@Valid @RequestBody PointDTO point) {
+        return tripService.driverUpdateLocation(point);
     }
 
 }
