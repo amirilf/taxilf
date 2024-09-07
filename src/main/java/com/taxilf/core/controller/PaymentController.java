@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.taxilf.core.service.PaymentService;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 
 @RestController
@@ -23,13 +24,13 @@ public class PaymentController {
         return paymentService.getBalance();
     }
 
-    @GetMapping("/deposit")
-    public Double deposit() {
+    @GetMapping("/deposit/{amount}")
+    public ResponseEntity<String> deposit(@RequestParam Double amount) {
         return null;
     }
 
-    @GetMapping("/withdrawal")
-    public Double withdrawal() {
+    @GetMapping("/withdrawal/{amount}")
+    public ResponseEntity<String> withdrawal(@RequestParam Double amount) {
         return null;
     }
 
