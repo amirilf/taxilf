@@ -3,6 +3,8 @@ package com.taxilf.core.controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -28,6 +30,7 @@ public class TripController {
         this.tripService = tripService;
     }
 
+    @ResponseStatus(code = HttpStatus.OK)
     @GetMapping("/fare")
     public Double getMethodName(@Valid @RequestBody TripPointDTO tripPointDTO) {
         return tripService.getFare(tripPointDTO);
@@ -44,6 +47,7 @@ public class TripController {
         return tripService.passengerRequest(tripRequestDTO);
     }
 
+    @ResponseStatus(code = HttpStatus.OK)
     @GetMapping("/passenger/status")
     public PassengerStatusDTO passengerStatus() {
         return tripService.passengerStatus();
@@ -61,6 +65,8 @@ public class TripController {
     
 
     // DRIVER
+
+    @ResponseStatus(code = HttpStatus.OK)
     @PostMapping("/driver/request")
     public DriverSearchDTO driverRequest() {
         return tripService.driverRequest();
@@ -71,6 +77,7 @@ public class TripController {
         return tripService.driverCancel();
     }
 
+    @ResponseStatus(code = HttpStatus.OK)
     @PostMapping("/driver/search")
     public DriverSearchDTO driverSearch() {
         return tripService.driverSearch();
@@ -81,6 +88,7 @@ public class TripController {
         return tripService.driverPick(id);
     }
 
+    @ResponseStatus(code = HttpStatus.OK)
     @GetMapping("/driver/status")
     public DriverStatusDTO driverStatus() {
         return tripService.driverStatus();
