@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Trip Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    />
+    <style>
+      #map {
+        height: 600px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+      var map = L.map("map").setView(
+        [36.29824550366994, 59.612432529324686],
+        13
+      );
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+      }).addTo(map);
+
+      var driverIcon = L.icon({
+        iconUrl: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png", // Blue for driver
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+      });
+
+      var passengerIcon = L.icon({
+        iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png", // Red for passenger
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+      });
+
+      var startEndIcon = L.icon({
+        iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png", // Green for start/end
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32],
+      });
+
+      fetch("http://127.0.0.1:8080/admin/test")
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          L.marker([data.driverLocation.lat, data.driverLocation.lon], {
+            icon: driverIcon,
+          })
+            .addTo(map)
+            .bindPopup("Driver Location")
+            .openPopup();
+
+          L.marker([data.passengerLocation.lat, data.passengerLocation.lon], {
+            icon: passengerIcon,
+          })
+            .addTo(map)
+            .bindPopup("Passenger Location")
+            .openPopup();
+
+          L.marker([data.start.lat, data.start.lon], {
+            icon: startEndIcon,
+          })
+            .addTo(map)
+            .bindPopup("Start Location")
+            .openPopup();
+
+          L.marker([data.end.lat, data.end.lon], {
+            icon: startEndIcon,
+          })
+            .addTo(map)
+            .bindPopup("End Location")
+            .openPopup();
+
+          var bounds = L.latLngBounds([
+            [data.driverLocation.lat, data.driverLocation.lon],
+            [data.passengerLocation.lat, data.passengerLocation.lon],
+            [data.start.lat, data.start.lon],
+            [data.end.lat, data.end.lon],
+          ]);
+          map.fitBounds(bounds);
+        })
+        .catch((error) => {
+          console.error("Error fetching data:", error);
+        });
+    </script>
+  </body>
+</html>

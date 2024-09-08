@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.taxilf.core.model.enums.TripStatus;
 
 import jakarta.persistence.CascadeType;
@@ -41,6 +42,7 @@ public class Trip {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id", nullable = false)
+    @JsonIgnore
     private Driver driver;
 
     @OneToOne(fetch = FetchType.LAZY)
